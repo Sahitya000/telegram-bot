@@ -23,7 +23,7 @@ if not all([TOKEN, CHANNEL_ID, GITHUB_TOKEN]):
 
 bot = telebot.TeleBot(TOKEN)
 
-# 🔹 Fetch Messages
+# 🔹 Fetch Messages from GitHub
 def get_messages():
     try:
         response = requests.get(GITHUB_MESSAGES_URL, timeout=5)
@@ -36,7 +36,7 @@ def get_messages():
             "update": "🔔 New APK Update Available: {app_name}\n📥 Download: {apk_link}"
         }
 
-# 🔹 Fetch APK Links
+# 🔹 Fetch APK Links from GitHub
 def get_apk_links():
     try:
         response = requests.get(GITHUB_APKS_URL, timeout=5)
@@ -45,7 +45,7 @@ def get_apk_links():
     except requests.RequestException:
         return {}
 
-# 🔹 Fetch Short Links
+# 🔹 Fetch Short Links from GitHub
 def get_short_links():
     try:
         response = requests.get(GITHUB_SHORTLINKS_URL, timeout=5)
@@ -54,62 +54,59 @@ def get_short_links():
     except requests.RequestException:
         return {}
 
-# 🔹 Update GitHub Data
+# 🔹 Check Subscription
+def is_subscribed(user_id):
+    try:
+        chat_member = bot.get_chat_member(CHANNEL_ID, user_id)
+        return chat_member.status in ["member", "administrator", "creator"]
+    except telebot.apihelper.ApiTelegramException:
+        return False
+
+# 🔹 Update Data on GitHub
 def update_github_data(url, new_data):
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
+    
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
         content_data = response.json()
         sha = content_data["sha"]
+        
         update_data = {
-            "message": "Updated data",
+            "message": "Updated Data",
             "content": base64.b64encode(json.dumps(new_data, indent=4).encode()).decode(),
             "sha": sha
         }
+        
         update_response = requests.put(url, headers=headers, json=update_data)
         return update_response.status_code == 200
     return False
 
-# 🔹 Admin Check
-def is_admin(user_id):
-    try:
-        chat_admins = bot.get_chat_administrators(CHANNEL_ID)
-        return any(admin.user.id == user_id for admin in chat_admins)
-    except telebot.apihelper.ApiTelegramException:
-        return False
-
-# 🔹 Generate Short Link (Admin Only)
+# 🔹 Generate Short URL
 @bot.message_handler(commands=["short"])
 def generate_short_link(message):
     user_id = message.chat.id
-    if not is_admin(user_id):
+    if user_id != int(CHANNEL_ID):
         bot.send_message(user_id, "❌ Sirf channel admins short link bana sakte hain!")
         return
 
     command_parts = message.text.split(" ", 1)
     if len(command_parts) < 2:
-        bot.send_message(user_id, "❌ Use: /short <apk_name>")
+        bot.send_message(user_id, "❌ Use: /short <actual_apk_link>")
         return
 
-    apk_name = command_parts[1].strip().lower()
-    apk_links = get_apk_links()
-
-    if apk_name not in apk_links:
-        bot.send_message(user_id, f"❌ APK '{apk_name}' database me nahi hai!")
-        return
-
+    original_link = command_parts[1].strip()
     short_code = f"sk_{int(time.time())}"
     short_link = f"https://t.me/{bot.get_me().username}?start={short_code}"
 
     short_links = get_short_links()
-    short_links[short_code] = apk_name
+    short_links[short_code] = original_link
 
     if update_github_data(GITHUB_SHORTLINKS_API, short_links):
-        bot.send_message(user_id, f"✅ Short Link Created for {apk_name}: {short_link}")
+        bot.send_message(user_id, f"✅ Short Link Created: {short_link}")
     else:
         bot.send_message(user_id, "⚠️ Error updating short links on GitHub.")
 
-# 🔹 Handle Short Links (Check Subscription + Open Directly)
+# 🔹 Handle Short Links
 @bot.message_handler(commands=["start"])
 def handle_start(message):
     command_parts = message.text.split(" ", 1)
@@ -118,29 +115,34 @@ def handle_start(message):
         short_links = get_short_links()
 
         if short_code in short_links:
-            apk_name = short_links[short_code]
-            apk_links = get_apk_links()
-
-            if apk_name in apk_links:
-                user_id = message.chat.id
-
-                if is_subscribed(user_id):
-                    bot.send_message(user_id, f"📥 Your Download Link: {apk_links[apk_name]}", disable_web_page_preview=True)
-                else:
-                    messages = get_messages()
-                    bot.send_message(user_id, messages["subscribe"].format(channel=CHANNEL_ID))
-                return
+            bot.send_message(message.chat.id, f"📥 Download Link: {short_links[short_code]}")
+            return
     
     messages = get_messages()
-    bot.send_message(message.chat.id, messages["start"])
+    markup = telebot.types.InlineKeyboardMarkup()
+    markup.add(telebot.types.InlineKeyboardButton("🔎 Get APK", callback_data="getapk"))
+    bot.send_message(message.chat.id, messages["start"], reply_markup=markup)
 
-# 🔹 Check Subscription
-def is_subscribed(user_id):
-    try:
-        chat_member = bot.get_chat_member(CHANNEL_ID, user_id)
-        return chat_member.status in ["member", "administrator", "creator"]
-    except telebot.apihelper.ApiTelegramException:
-        return False
+# 🔹 Direct APK Name Input
+@bot.message_handler(func=lambda message: True)
+def handle_apk_request(message):
+    user_id = message.chat.id
+    apk_links = get_apk_links()
+
+    app_name = message.text.lower().strip()
+    if app_name in apk_links:
+        apk_link = apk_links[app_name]
+
+        markup = telebot.types.InlineKeyboardMarkup()
+        markup.add(telebot.types.InlineKeyboardButton("📥 Download APK", url=apk_link))
+
+        if is_subscribed(user_id):
+            bot.send_message(user_id, f"📥 **Download {app_name}:**", reply_markup=markup)
+        else:
+            messages = get_messages()
+            bot.send_message(user_id, messages["subscribe"].format(channel=CHANNEL_ID))
+    else:
+        bot.send_message(user_id, "❌ Koi APK nahi mila! Sahi naam likho ya /getapk use karo.")
 
 # 🔹 Handle APK Uploads
 @bot.message_handler(content_types=["document"])
