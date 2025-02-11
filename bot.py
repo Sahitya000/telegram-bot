@@ -109,7 +109,7 @@ def generate_short_link(message):
     else:
         bot.send_message(user_id, "⚠️ Error updating short links on GitHub.")
 
-# 🔹 Handle Short Links (Check Subscription)
+# 🔹 Handle Short Links (Check Subscription + Open Directly)
 @bot.message_handler(commands=["start"])
 def handle_start(message):
     command_parts = message.text.split(" ", 1)
@@ -125,7 +125,7 @@ def handle_start(message):
                 user_id = message.chat.id
 
                 if is_subscribed(user_id):
-                    bot.send_message(user_id, f"📥 Your Download Link:\n{apk_links[apk_name]}")
+                    bot.send_message(user_id, f"📥 Your Download Link: {apk_links[apk_name]}", disable_web_page_preview=True)
                 else:
                     messages = get_messages()
                     bot.send_message(user_id, messages["subscribe"].format(channel=CHANNEL_ID))
@@ -134,26 +134,13 @@ def handle_start(message):
     messages = get_messages()
     bot.send_message(message.chat.id, messages["start"])
 
-# 🔹 Direct APK Name Input
-@bot.message_handler(func=lambda message: True)
-def handle_apk_request(message):
-    user_id = message.chat.id
-    apk_links = get_apk_links()
-
-    app_name = message.text.lower().strip()
-    if app_name in apk_links:
-        apk_link = apk_links[app_name]
-
-        markup = telebot.types.InlineKeyboardMarkup()
-        markup.add(telebot.types.InlineKeyboardButton("📥 Download APK", url=apk_link))
-
-        if is_subscribed(user_id):
-            bot.send_message(user_id, f"📥 **Download {app_name}:**", reply_markup=markup)
-        else:
-            messages = get_messages()
-            bot.send_message(user_id, messages["subscribe"].format(channel=CHANNEL_ID))
-    else:
-        bot.send_message(user_id, "❌ Koi APK nahi mila! Sahi naam likho ya /getapk use karo.")
+# 🔹 Check Subscription
+def is_subscribed(user_id):
+    try:
+        chat_member = bot.get_chat_member(CHANNEL_ID, user_id)
+        return chat_member.status in ["member", "administrator", "creator"]
+    except telebot.apihelper.ApiTelegramException:
+        return False
 
 # 🔹 Handle APK Uploads
 @bot.message_handler(content_types=["document"])
@@ -174,14 +161,6 @@ def handle_apk_upload(message):
         bot.send_message(CHANNEL_ID, f"✅ {file_name} added to APK database!")
     else:
         bot.send_message(CHANNEL_ID, "⚠️ Error updating APK list on GitHub.")
-
-# 🔹 Check Subscription
-def is_subscribed(user_id):
-    try:
-        chat_member = bot.get_chat_member(CHANNEL_ID, user_id)
-        return chat_member.status in ["member", "administrator", "creator"]
-    except telebot.apihelper.ApiTelegramException:
-        return False
 
 # 🔹 Background Thread: Auto-check for updates
 def check_for_updates():
