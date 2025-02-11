@@ -2,12 +2,16 @@ import telebot
 import os
 import requests
 import time
+import threading
 
-# Bot Token & Config (Railway ke ENV me set karna)
+# Environment Variables (Railway ke ENV me set karna)
 TOKEN = os.getenv("BOT_TOKEN")
-CHANNEL_ID = os.getenv("CHANNEL_ID")  # Channel ID or username
-GITHUB_MESSAGES_URL = os.getenv("GITHUB_MESSAGES_URL")  # Messages file ka URL
-GITHUB_APKS_URL = os.getenv("GITHUB_APKS_URL")  # APK links ka JSON file URL
+CHANNEL_ID = os.getenv("CHANNEL_ID")  # Telegram Channel ID
+GITHUB_MESSAGES_URL = os.getenv("GITHUB_MESSAGES_URL")  # Messages JSON
+GITHUB_APKS_URL = os.getenv("GITHUB_APKS_URL")  # APK links JSON
+
+if not TOKEN or not CHANNEL_ID or not GITHUB_MESSAGES_URL or not GITHUB_APKS_URL:
+    raise ValueError("❌ ERROR: Please set all environment variables in Railway!")
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -19,29 +23,30 @@ def get_messages():
         "update": "🔔 New APK Update Available for {app_name}! 📥\nDownload: {apk_link}"
     }
     try:
-        response = requests.get(GITHUB_MESSAGES_URL)
-        if response.status_code == 200:
-            return response.json()
-    except:
-        pass
-    return default_messages
+        response = requests.get(GITHUB_MESSAGES_URL, timeout=5)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        print(f"⚠️ Error fetching messages: {e}")
+        return default_messages
 
 # Function to fetch APK links from GitHub
 def get_apk_links():
     try:
-        response = requests.get(GITHUB_APKS_URL)
-        if response.status_code == 200:
-            return response.json()
-    except:
-        pass
-    return {}
+        response = requests.get(GITHUB_APKS_URL, timeout=5)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        print(f"⚠️ Error fetching APK links: {e}")
+        return {}
 
 # Function to check if user is subscribed
 def is_subscribed(user_id):
     try:
         chat_member = bot.get_chat_member(CHANNEL_ID, user_id)
         return chat_member.status in ["member", "administrator", "creator"]
-    except:
+    except telebot.apihelper.ApiTelegramException as e:
+        print(f"⚠️ Subscription check failed: {e}")
         return False
 
 # /start command
@@ -63,7 +68,7 @@ def send_apk_link(message):
         bot.send_message(user_id, "❌ Please use: /getapk app_name\nExample: /getapk instamax")
         return
     
-    app_name = command_parts[1].lower()  # Convert app name to lowercase
+    app_name = command_parts[1].lower().strip()  # Convert app name to lowercase
 
     # Check if app exists
     if app_name not in apk_links:
@@ -80,18 +85,23 @@ def send_apk_link(message):
 def check_for_updates():
     last_apks = {}
     while True:
-        apk_links = get_apk_links()
-        messages = get_messages()
+        try:
+            apk_links = get_apk_links()
+            messages = get_messages()
 
-        for app_name, apk_link in apk_links.items():
-            if app_name not in last_apks or last_apks[app_name] != apk_link:
-                bot.send_message(CHANNEL_ID, messages["update"].format(app_name=app_name, apk_link=apk_link))
-                last_apks[app_name] = apk_link
+            for app_name, apk_link in apk_links.items():
+                if app_name not in last_apks or last_apks[app_name] != apk_link:
+                    bot.send_message(CHANNEL_ID, messages["update"].format(app_name=app_name, apk_link=apk_link))
+                    last_apks[app_name] = apk_link
 
-        time.sleep(3600)  # Check every 1 hour
+            time.sleep(3600)  # Check every 1 hour
+        except Exception as e:
+            print(f"⚠️ Error in update check: {e}")
+            time.sleep(60)  # Error aane par 1 minute ke liye wait karega
 
-# Start bot polling
-import threading
+# Start bot polling in main thread
 update_thread = threading.Thread(target=check_for_updates, daemon=True)
 update_thread.start()
+
+print("🚀 Bot is running...")
 bot.polling()
