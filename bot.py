@@ -2,9 +2,9 @@ import telebot
 import os
 import requests
 import json
-import base64
 import threading
 import time
+import base64
 
 # 🔹 Load Environment Variables from Railway
 TOKEN = os.getenv("BOT_TOKEN")
@@ -16,48 +16,50 @@ GITHUB_MESSAGES_URL = "https://raw.githubusercontent.com/Sahitya000/telegram-bot
 GITHUB_APKS_URL = "https://raw.githubusercontent.com/Sahitya000/telegram-bot/main/apk_links.json"
 GITHUB_REPO_API = "https://api.github.com/repos/Sahitya000/telegram-bot/contents/apk_links.json"
 
-# 🔹 Bot Initialization
+if not all([TOKEN, CHANNEL_ID, GITHUB_TOKEN]):
+    raise ValueError("❌ ERROR: Please set BOT_TOKEN, CHANNEL_ID, and GITHUB_TOKEN in Railway!")
+
 bot = telebot.TeleBot(TOKEN)
 
-# 🔹 Function: Fetch Messages from GitHub
+# 🔹 Fetch Messages from GitHub
 def get_messages():
     try:
         response = requests.get(GITHUB_MESSAGES_URL, timeout=5)
         response.raise_for_status()
         return response.json()
-    except:
+    except requests.RequestException:
         return {
             "start": "👋 Welcome! Click below to download your app:",
             "subscribe": "❌ You must subscribe to get the APK. Join here: https://t.me/{channel}",
             "update": "🔔 New APK Update Available: {app_name}\n📥 Download: {apk_link}"
         }
 
-# 🔹 Function: Fetch APK Links from GitHub
+# 🔹 Fetch APK Links from GitHub
 def get_apk_links():
     try:
         response = requests.get(GITHUB_APKS_URL, timeout=5)
         response.raise_for_status()
         return response.json()
-    except:
+    except requests.RequestException:
         return {}
 
-# 🔹 Function: Check Subscription
+# 🔹 Check Subscription
 def is_subscribed(user_id):
     try:
         chat_member = bot.get_chat_member(CHANNEL_ID, user_id)
         return chat_member.status in ["member", "administrator", "creator"]
-    except:
+    except telebot.apihelper.ApiTelegramException:
         return False
 
-# 🔹 Function: Generate Short URL
+# 🔹 Generate Short URL
 def generate_short_url(apk_name):
     return f"https://t.me/{bot.get_me().username}?start=apk_{apk_name}"
 
-# 🔹 Function: Update APK Links on GitHub
+# 🔹 Update APK Links on GitHub
 def update_github_apk_links(new_data):
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
-    response = requests.get(GITHUB_REPO_API, headers=headers)
     
+    response = requests.get(GITHUB_REPO_API, headers=headers)
     if response.status_code == 200:
         content_data = response.json()
         sha = content_data["sha"]
@@ -72,41 +74,15 @@ def update_github_apk_links(new_data):
         return update_response.status_code == 200
     return False
 
-# 🔹 Command: /start
+# 🔹 /start Command
 @bot.message_handler(commands=["start"])
 def send_welcome(message):
     messages = get_messages()
     markup = telebot.types.InlineKeyboardMarkup()
-    markup.add(telebot.types.InlineKeyboardButton("🔎 Get APK", callback_data="getapk_menu"))
+    markup.add(telebot.types.InlineKeyboardButton("🔎 Get APK", callback_data="getapk"))
     bot.send_message(message.chat.id, messages["start"], reply_markup=markup)
 
-# 🔹 Callback Handler: Get APK Menu
-@bot.callback_query_handler(func=lambda call: call.data == "getapk_menu")
-def get_apk_menu(call):
-    apk_links = get_apk_links()
-    if not apk_links:
-        bot.answer_callback_query(call.id, "❌ No APKs available!")
-        return
-    
-    markup = telebot.types.InlineKeyboardMarkup()
-    for apk_name in apk_links.keys():
-        markup.add(telebot.types.InlineKeyboardButton(apk_name, callback_data=f"getapk_{apk_name}"))
-    
-    bot.edit_message_text("📥 Select APK:", call.message.chat.id, call.message.message_id, reply_markup=markup)
-
-# 🔹 Callback Handler: Send APK Link
-@bot.callback_query_handler(func=lambda call: call.data.startswith("getapk_"))
-def send_apk_link_callback(call):
-    apk_name = call.data.replace("getapk_", "")
-    apk_links = get_apk_links()
-
-    if apk_name in apk_links:
-        apk_link = generate_short_url(apk_name)
-        bot.send_message(call.message.chat.id, f"📥 Download **{apk_name}**: {apk_link}", parse_mode="Markdown")
-    else:
-        bot.send_message(call.message.chat.id, "❌ APK link not found!")
-
-# 🔹 Command: /getapk
+# 🔹 /getapk Command
 @bot.message_handler(commands=["getapk"])
 def send_apk_link(message):
     user_id = message.chat.id
@@ -123,12 +99,28 @@ def send_apk_link(message):
         return
 
     apk_link = generate_short_url(app_name)
+    markup = telebot.types.InlineKeyboardMarkup()
+    markup.add(telebot.types.InlineKeyboardButton("📥 Download APK", url=apk_link))
 
     if is_subscribed(user_id):
-        bot.send_message(user_id, f"📥 Download {app_name}:\n{apk_link}")
+        bot.send_message(user_id, f"📥 Download {app_name}:", reply_markup=markup)
     else:
         messages = get_messages()
         bot.send_message(user_id, messages["subscribe"].format(channel=CHANNEL_ID))
+
+# 🔹 Inline Button Click Handler
+@bot.callback_query_handler(func=lambda call: call.data.startswith("getapk_"))
+def send_apk_link_callback(call):
+    apk_name = call.data.replace("getapk_", "")
+    apk_links = get_apk_links()
+
+    if apk_name in apk_links:
+        apk_link = generate_short_url(apk_name)
+        markup = telebot.types.InlineKeyboardMarkup()
+        markup.add(telebot.types.InlineKeyboardButton("📥 Download APK", url=apk_link))
+        bot.send_message(call.message.chat.id, f"📥 Download **{apk_name}**:", parse_mode="Markdown", reply_markup=markup)
+    else:
+        bot.send_message(call.message.chat.id, "❌ APK link not found!")
 
 # 🔹 Handle APK Uploads
 @bot.message_handler(content_types=["document"])
@@ -150,18 +142,27 @@ def handle_apk_upload(message):
     else:
         bot.send_message(CHANNEL_ID, "⚠️ Error updating APK list on GitHub.")
 
-# 🔹 Auto-send APK when user joins channel
-@bot.message_handler(func=lambda message: message.new_chat_members is not None)
-def welcome_new_member(message):
+# 🔹 Direct APK Name Input Handling
+@bot.message_handler(func=lambda message: True)
+def handle_direct_apk_request(message):
     user_id = message.chat.id
     apk_links = get_apk_links()
 
-    if apk_links:
-        latest_apk = list(apk_links.keys())[-1]
-        apk_link = generate_short_url(latest_apk)
-        bot.send_message(user_id, f"🎉 Welcome! Get the latest APK:\n{apk_link}")
+    app_name = message.text.lower().strip()
+    if app_name in apk_links:
+        apk_link = generate_short_url(app_name)
+        markup = telebot.types.InlineKeyboardMarkup()
+        markup.add(telebot.types.InlineKeyboardButton("📥 Download APK", url=apk_link))
 
-# 🔹 Background Thread: Auto-check for updates
+        if is_subscribed(user_id):
+            bot.send_message(user_id, f"📥 Download {app_name}:", reply_markup=markup)
+        else:
+            messages = get_messages()
+            bot.send_message(user_id, messages["subscribe"].format(channel=CHANNEL_ID))
+    else:
+        bot.send_message(user_id, "❌ Koi APK nahi mila! Sahi naam likho ya /getapk use karo.")
+
+# 🔹 Auto-check for APK updates
 def check_for_updates():
     last_apks = get_apk_links()
     while True:
@@ -175,7 +176,6 @@ def check_for_updates():
         
         time.sleep(3600)
 
-# 🔹 Start Update Thread
 update_thread = threading.Thread(target=check_for_updates, daemon=True)
 update_thread.start()
 
