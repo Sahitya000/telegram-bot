@@ -99,11 +99,9 @@ def send_apk_link(message):
         return
 
     apk_link = generate_short_url(app_name)
-    markup = telebot.types.InlineKeyboardMarkup()
-    markup.add(telebot.types.InlineKeyboardButton("📥 Download APK", url=apk_link))
 
     if is_subscribed(user_id):
-        bot.send_message(user_id, f"📥 Download {app_name}:", reply_markup=markup)
+        bot.send_message(user_id, f"📥 Download {app_name}:\n{apk_link}")
     else:
         messages = get_messages()
         bot.send_message(user_id, messages["subscribe"].format(channel=CHANNEL_ID))
@@ -118,9 +116,29 @@ def send_apk_link_callback(call):
         apk_link = generate_short_url(apk_name)
         markup = telebot.types.InlineKeyboardMarkup()
         markup.add(telebot.types.InlineKeyboardButton("📥 Download APK", url=apk_link))
-        bot.send_message(call.message.chat.id, f"📥 Download **{apk_name}**:", parse_mode="Markdown", reply_markup=markup)
+        bot.send_message(call.message.chat.id, f"📥 Download {apk_name}:", reply_markup=markup)
     else:
         bot.send_message(call.message.chat.id, "❌ APK link not found!")
+
+# 🔹 Direct APK Name Input (Fixed)
+@bot.message_handler(func=lambda message: True)
+def handle_direct_apk_request(message):
+    user_id = message.chat.id
+    apk_links = get_apk_links()
+
+    app_name = message.text.lower().strip()
+    if app_name in apk_links:
+        apk_link = generate_short_url(app_name)
+        markup = telebot.types.InlineKeyboardMarkup()
+        markup.add(telebot.types.InlineKeyboardButton("📥 Download APK", url=apk_link))
+
+        if is_subscribed(user_id):
+            bot.send_message(user_id, f"📥 Download {app_name}:", reply_markup=markup)
+        else:
+            messages = get_messages()
+            bot.send_message(user_id, messages["subscribe"].format(channel=CHANNEL_ID))
+    else:
+        bot.send_message(user_id, "❌ Koi APK nahi mila! Sahi naam likho ya /getapk use karo.")
 
 # 🔹 Handle APK Uploads
 @bot.message_handler(content_types=["document"])
@@ -142,27 +160,7 @@ def handle_apk_upload(message):
     else:
         bot.send_message(CHANNEL_ID, "⚠️ Error updating APK list on GitHub.")
 
-# 🔹 Direct APK Name Input Handling
-@bot.message_handler(func=lambda message: True)
-def handle_direct_apk_request(message):
-    user_id = message.chat.id
-    apk_links = get_apk_links()
-
-    app_name = message.text.lower().strip()
-    if app_name in apk_links:
-        apk_link = generate_short_url(app_name)
-        markup = telebot.types.InlineKeyboardMarkup()
-        markup.add(telebot.types.InlineKeyboardButton("📥 Download APK", url=apk_link))
-
-        if is_subscribed(user_id):
-            bot.send_message(user_id, f"📥 Download {app_name}:", reply_markup=markup)
-        else:
-            messages = get_messages()
-            bot.send_message(user_id, messages["subscribe"].format(channel=CHANNEL_ID))
-    else:
-        bot.send_message(user_id, "❌ Koi APK nahi mila! Sahi naam likho ya /getapk use karo.")
-
-# 🔹 Auto-check for APK updates
+# 🔹 Background Thread: Auto-check for updates
 def check_for_updates():
     last_apks = get_apk_links()
     while True:
