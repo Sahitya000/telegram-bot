@@ -4,6 +4,7 @@ import requests
 import json
 import threading
 import time
+import base64
 
 # 🔹 Load Environment Variables from Railway
 TOKEN = os.getenv("BOT_TOKEN")
@@ -50,11 +51,11 @@ def is_subscribed(user_id):
     except telebot.apihelper.ApiTelegramException:
         return False
 
-# 🔹 Generate Short URL
-def generate_short_url(original_url):
-    return f"https://t.me/{bot.get_me().username}?start={original_url.split('/')[-1]}"
+# 🔹 Generate Short URL (Fixed)
+def generate_short_url(apk_name):
+    return f"https://t.me/{bot.get_me().username}?start=apk_{apk_name}"
 
-# 🔹 Update APK Links on GitHub
+# 🔹 Update APK Links on GitHub (Fixed Encoding Issue)
 def update_github_apk_links(new_data):
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     
@@ -65,7 +66,7 @@ def update_github_apk_links(new_data):
         
         update_data = {
             "message": "Updated APK links",
-            "content": json.dumps(new_data, indent=4),
+            "content": base64.b64encode(json.dumps(new_data, indent=4).encode()).decode(),
             "sha": sha
         }
         
@@ -97,7 +98,7 @@ def send_apk_link(message):
         bot.send_message(user_id, f"❌ No APK found for '{app_name}'. Try another app.")
         return
 
-    apk_link = generate_short_url(apk_links[app_name])
+    apk_link = generate_short_url(app_name)
 
     if is_subscribed(user_id):
         bot.send_message(user_id, f"📥 Download {app_name}:\n{apk_link}")
@@ -105,7 +106,19 @@ def send_apk_link(message):
         messages = get_messages()
         bot.send_message(user_id, messages["subscribe"].format(channel=CHANNEL_ID))
 
-# 🔹 Handle APK Uploads (Auto-Update GitHub)
+# 🔹 Inline Button Click Handler (Fixed)
+@bot.callback_query_handler(func=lambda call: call.data.startswith("getapk_"))
+def send_apk_link_callback(call):
+    apk_name = call.data.replace("getapk_", "")
+    apk_links = get_apk_links()
+
+    if apk_name in apk_links:
+        apk_link = generate_short_url(apk_name)
+        bot.send_message(call.message.chat.id, f"📥 Download **{apk_name}**: {apk_link}", parse_mode="Markdown")
+    else:
+        bot.send_message(call.message.chat.id, "❌ APK link not found!")
+
+# 🔹 Handle APK Uploads (Fixed Auto-Update GitHub)
 @bot.message_handler(content_types=["document"])
 def handle_apk_upload(message):
     if message.chat.id != int(CHANNEL_ID):
@@ -125,7 +138,7 @@ def handle_apk_upload(message):
     else:
         bot.send_message(CHANNEL_ID, "⚠️ Error updating APK list on GitHub.")
 
-# 🔹 Auto-send APK when user joins channel
+# 🔹 Auto-send APK when user joins channel (Fixed)
 @bot.message_handler(func=lambda message: message.new_chat_members is not None)
 def welcome_new_member(message):
     user_id = message.chat.id
@@ -133,19 +146,19 @@ def welcome_new_member(message):
 
     if apk_links:
         latest_apk = list(apk_links.keys())[-1]
-        apk_link = generate_short_url(apk_links[latest_apk])
+        apk_link = generate_short_url(latest_apk)
         bot.send_message(user_id, f"🎉 Welcome! Get the latest APK:\n{apk_link}")
 
-# 🔹 Background Thread: Auto-check for updates
+# 🔹 Background Thread: Auto-check for updates (Fixed)
 def check_for_updates():
-    last_apks = {}
+    last_apks = get_apk_links()
     while True:
         apk_links = get_apk_links()
         messages = get_messages()
 
         for app_name, apk_link in apk_links.items():
-            if app_name not in last_apks or last_apks[app_name] != apk_link:
-                bot.send_message(CHANNEL_ID, messages["update"].format(app_name=app_name, apk_link=apk_link))
+            if last_apks.get(app_name) != apk_link:
+                bot.send_message(CHANNEL_ID, messages["update"].format(app_name=app_name, apk_link=generate_short_url(app_name)))
                 last_apks[app_name] = apk_link
         
         time.sleep(3600)
