@@ -74,21 +74,31 @@ def update_github_apk_links(new_data):
         return update_response.status_code == 200
     return False
 
-# 🔹 /start Command with Short Links
+# 🔹 /start Command
 @bot.message_handler(commands=["start"])
-def handle_start(message):
-    command_parts = message.text.split(" ", 1)
-    if len(command_parts) == 2:
-        apk_name = command_parts[1].replace("apk_", "")
-        apk_links = get_apk_links()
-        if apk_name in apk_links:
-            bot.send_message(message.chat.id, f"📥 **Download {apk_name}:** {apk_links[apk_name]}")
-            return
-    
+def send_welcome(message):
     messages = get_messages()
     bot.send_message(message.chat.id, messages["start"])
 
-# 🔹 Direct APK Name Input with Inline Buttons
+# 🔹 /short Command (Generate Short Link)
+@bot.message_handler(commands=["short"])
+def handle_short(message):
+    apk_links = get_apk_links()
+    command_parts = message.text.split(" ", 1)
+    
+    if len(command_parts) < 2:
+        bot.send_message(message.chat.id, "❌ Koi APK naam mention nahi kiya! Example: /short instamax")
+        return
+    
+    apk_name = command_parts[1].strip().lower()
+    
+    if apk_name in apk_links:
+        short_link = generate_short_url(apk_name)
+        bot.send_message(message.chat.id, f"🔗 **Short Link for {apk_name}:** {short_link}")
+    else:
+        bot.send_message(message.chat.id, "❌ Koi APK nahi mila! Sahi naam likho ya /getapk use karo.")
+
+# 🔹 Direct APK Name Input
 @bot.message_handler(func=lambda message: True)
 def handle_apk_request(message):
     user_id = message.chat.id
@@ -105,13 +115,11 @@ def handle_apk_request(message):
             bot.send_message(user_id, f"📥 **Download {app_name}:**", reply_markup=markup)
         else:
             messages = get_messages()
-            sub_markup = telebot.types.InlineKeyboardMarkup()
-            sub_markup.add(telebot.types.InlineKeyboardButton("🔔 Subscribe Now", url=f"https://t.me/{CHANNEL_ID}"))
-            bot.send_message(user_id, messages["subscribe"].format(channel=CHANNEL_ID), reply_markup=sub_markup)
+            bot.send_message(user_id, messages["subscribe"].format(channel=CHANNEL_ID))
     else:
         bot.send_message(user_id, "❌ Koi APK nahi mila! Sahi naam likho ya /getapk use karo.")
 
-# 🔹 Handle APK Uploads with Short Links
+# 🔹 Handle APK Uploads
 @bot.message_handler(content_types=["document"])
 def handle_apk_upload(message):
     if message.chat.id != int(CHANNEL_ID):
@@ -127,8 +135,7 @@ def handle_apk_upload(message):
     apk_links[file_name] = file_url
 
     if update_github_apk_links(apk_links):
-        short_link = generate_short_url(file_name)
-        bot.send_message(CHANNEL_ID, f"✅ **{file_name} added to APK database!**\n🔗 **Short Link:** {short_link}")
+        bot.send_message(CHANNEL_ID, f"✅ {file_name} added to APK database!")
     else:
         bot.send_message(CHANNEL_ID, "⚠️ Error updating APK list on GitHub.")
 
