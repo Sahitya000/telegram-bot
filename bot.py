@@ -78,62 +78,23 @@ def update_github_apk_links(new_data):
 @bot.message_handler(commands=["start"])
 def send_welcome(message):
     messages = get_messages()
-    markup = telebot.types.InlineKeyboardMarkup()
-    markup.add(telebot.types.InlineKeyboardButton("🔎 Get APK", callback_data="getapk"))
-    bot.send_message(message.chat.id, messages["start"], reply_markup=markup)
+    bot.send_message(message.chat.id, messages["start"])
 
-# 🔹 /getapk Command
-@bot.message_handler(commands=["getapk"])
-def send_apk_link(message):
-    user_id = message.chat.id
-    apk_links = get_apk_links()
-
-    command_parts = message.text.split(" ")
-    if len(command_parts) < 2:
-        bot.send_message(user_id, "❌ Please use: /getapk app_name\nExample: /getapk instamax")
-        return
-
-    app_name = command_parts[1].lower().strip()
-    if app_name not in apk_links:
-        bot.send_message(user_id, f"❌ No APK found for '{app_name}'. Try another app.")
-        return
-
-    apk_link = generate_short_url(app_name)
-
-    if is_subscribed(user_id):
-        bot.send_message(user_id, f"📥 Download {app_name}:\n{apk_link}")
-    else:
-        messages = get_messages()
-        bot.send_message(user_id, messages["subscribe"].format(channel=CHANNEL_ID))
-
-# 🔹 Inline Button Click Handler
-@bot.callback_query_handler(func=lambda call: call.data.startswith("getapk_"))
-def send_apk_link_callback(call):
-    apk_name = call.data.replace("getapk_", "")
-    apk_links = get_apk_links()
-
-    if apk_name in apk_links:
-        apk_link = generate_short_url(apk_name)
-        markup = telebot.types.InlineKeyboardMarkup()
-        markup.add(telebot.types.InlineKeyboardButton("📥 Download APK", url=apk_link))
-        bot.send_message(call.message.chat.id, f"📥 Download {apk_name}:", reply_markup=markup)
-    else:
-        bot.send_message(call.message.chat.id, "❌ APK link not found!")
-
-# 🔹 Direct APK Name Input (Fixed)
+# 🔹 Direct APK Name Input
 @bot.message_handler(func=lambda message: True)
-def handle_direct_apk_request(message):
+def handle_apk_request(message):
     user_id = message.chat.id
     apk_links = get_apk_links()
 
     app_name = message.text.lower().strip()
     if app_name in apk_links:
-        apk_link = generate_short_url(app_name)
+        apk_link = apk_links[app_name]
+
         markup = telebot.types.InlineKeyboardMarkup()
         markup.add(telebot.types.InlineKeyboardButton("📥 Download APK", url=apk_link))
 
         if is_subscribed(user_id):
-            bot.send_message(user_id, f"📥 Download {app_name}:", reply_markup=markup)
+            bot.send_message(user_id, f"📥 **Download {app_name}:**", reply_markup=markup)
         else:
             messages = get_messages()
             bot.send_message(user_id, messages["subscribe"].format(channel=CHANNEL_ID))
@@ -169,9 +130,9 @@ def check_for_updates():
 
         for app_name, apk_link in apk_links.items():
             if last_apks.get(app_name) != apk_link:
-                bot.send_message(CHANNEL_ID, messages["update"].format(app_name=app_name, apk_link=generate_short_url(app_name)))
+                bot.send_message(CHANNEL_ID, messages["update"].format(app_name=app_name, apk_link=apk_link))
                 last_apks[app_name] = apk_link
-        
+
         time.sleep(3600)
 
 update_thread = threading.Thread(target=check_for_updates, daemon=True)
