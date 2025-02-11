@@ -1,0 +1,5 @@
+{
+    "start": "Hello! Select an app to download: \n/getapk app_name",
+    "subscribe": "❌ You must join our channel to get the APK. Join here: https://t.me/MyChannel",
+    "update": "🔥 New update available for {app_name}! Download now: {apk_link}"
+}
