@@ -51,11 +51,11 @@ def is_subscribed(user_id):
     except telebot.apihelper.ApiTelegramException:
         return False
 
-# 🔹 Generate Short URL (Fixed)
+# 🔹 Generate Short URL
 def generate_short_url(apk_name):
     return f"https://t.me/{bot.get_me().username}?start=apk_{apk_name}"
 
-# 🔹 Update APK Links on GitHub (Fixed Encoding Issue)
+# 🔹 Update APK Links on GitHub
 def update_github_apk_links(new_data):
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     
@@ -79,34 +79,29 @@ def update_github_apk_links(new_data):
 def send_welcome(message):
     messages = get_messages()
     markup = telebot.types.InlineKeyboardMarkup()
+    
+    # Fix: Callback data correct kiya
     markup.add(telebot.types.InlineKeyboardButton("🔎 Get APK", callback_data="getapk"))
     bot.send_message(message.chat.id, messages["start"], reply_markup=markup)
 
-# 🔹 /getapk Command
-@bot.message_handler(commands=["getapk"])
-def send_apk_link(message):
-    user_id = message.chat.id
+# 🔹 Handle Inline Button Click (Fix)
+@bot.callback_query_handler(func=lambda call: call.data == "getapk")
+def send_apk_list(call):
     apk_links = get_apk_links()
-
-    command_parts = message.text.split(" ")
-    if len(command_parts) < 2:
-        bot.send_message(user_id, "❌ Please use: /getapk app_name\nExample: /getapk instamax")
+    
+    if not apk_links:
+        bot.send_message(call.message.chat.id, "❌ No APKs available right now!")
         return
+    
+    markup = telebot.types.InlineKeyboardMarkup()
+    
+    # Fix: Callback data correct kiya
+    for apk in apk_links.keys():
+        markup.add(telebot.types.InlineKeyboardButton(apk, callback_data=f"getapk_{apk}"))
+    
+    bot.send_message(call.message.chat.id, "📥 Select an APK to download:", reply_markup=markup)
 
-    app_name = command_parts[1].lower().strip()
-    if app_name not in apk_links:
-        bot.send_message(user_id, f"❌ No APK found for '{app_name}'. Try another app.")
-        return
-
-    apk_link = generate_short_url(app_name)
-
-    if is_subscribed(user_id):
-        bot.send_message(user_id, f"📥 Download {app_name}:\n{apk_link}")
-    else:
-        messages = get_messages()
-        bot.send_message(user_id, messages["subscribe"].format(channel=CHANNEL_ID))
-
-# 🔹 Inline Button Click Handler (Fixed)
+# 🔹 Handle APK Selection from Inline Button
 @bot.callback_query_handler(func=lambda call: call.data.startswith("getapk_"))
 def send_apk_link_callback(call):
     apk_name = call.data.replace("getapk_", "")
@@ -118,7 +113,7 @@ def send_apk_link_callback(call):
     else:
         bot.send_message(call.message.chat.id, "❌ APK link not found!")
 
-# 🔹 Handle APK Uploads (Fixed Auto-Update GitHub)
+# 🔹 Handle APK Uploads
 @bot.message_handler(content_types=["document"])
 def handle_apk_upload(message):
     if message.chat.id != int(CHANNEL_ID):
@@ -138,18 +133,7 @@ def handle_apk_upload(message):
     else:
         bot.send_message(CHANNEL_ID, "⚠️ Error updating APK list on GitHub.")
 
-# 🔹 Auto-send APK when user joins channel (Fixed)
-@bot.message_handler(func=lambda message: message.new_chat_members is not None)
-def welcome_new_member(message):
-    user_id = message.chat.id
-    apk_links = get_apk_links()
-
-    if apk_links:
-        latest_apk = list(apk_links.keys())[-1]
-        apk_link = generate_short_url(latest_apk)
-        bot.send_message(user_id, f"🎉 Welcome! Get the latest APK:\n{apk_link}")
-
-# 🔹 Background Thread: Auto-check for updates (Fixed)
+# 🔹 Background Thread: Auto-check for updates (Fixed Indentation)
 def check_for_updates():
     last_apks = get_apk_links()
     while True:
@@ -160,8 +144,8 @@ def check_for_updates():
             if last_apks.get(app_name) != apk_link:
                 bot.send_message(CHANNEL_ID, messages["update"].format(app_name=app_name, apk_link=generate_short_url(app_name)))
                 last_apks[app_name] = apk_link
-        
-        time.sleep(3600)
+
+        time.sleep(3600)  # Indentation Fix
 
 update_thread = threading.Thread(target=check_for_updates, daemon=True)
 update_thread.start()
