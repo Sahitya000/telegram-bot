@@ -4,14 +4,16 @@ import requests
 import time
 import threading
 
-# Environment Variables (Railway ke ENV me set karna)
+# Bot Token (Railway ENV me set karna)
 TOKEN = os.getenv("BOT_TOKEN")
-CHANNEL_ID = os.getenv("CHANNEL_ID")  # Telegram Channel ID
-GITHUB_MESSAGES_URL = os.getenv("GITHUB_MESSAGES_URL")  # Messages JSON
-GITHUB_APKS_URL = os.getenv("GITHUB_APKS_URL")  # APK links JSON
+CHANNEL_ID = os.getenv("CHANNEL_ID")
 
-if not TOKEN or not CHANNEL_ID or not GITHUB_MESSAGES_URL or not GITHUB_APKS_URL:
-    raise ValueError("❌ ERROR: Please set all environment variables in Railway!")
+# GitHub Raw Links (bot.py me direct store)
+GITHUB_MESSAGES_URL = "https://raw.githubusercontent.com/Sahitya000/telegram-bot/main/messages.json"
+GITHUB_APKS_URL = "https://raw.githubusercontent.com/Sahitya000/telegram-bot/main/apk_links.json"
+
+if not TOKEN or not CHANNEL_ID:
+    raise ValueError("❌ ERROR: Please set BOT_TOKEN and CHANNEL_ID in Railway!")
 
 bot = telebot.TeleBot(TOKEN)
 
