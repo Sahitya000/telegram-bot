@@ -37,7 +37,9 @@ def get_apk_links():
     try:
         response = requests.get(GITHUB_APKS_URL, timeout=5)
         response.raise_for_status()
-        return response.json()
+        apk_data = response.json()
+        print("🔍 Debug: APK Links Fetched ->", apk_data)  # Debug Log
+        return apk_data
     except requests.RequestException as e:
         print(f"⚠️ Error fetching APK links: {e}")
         return {}
@@ -61,26 +63,34 @@ def send_welcome(message):
 @bot.message_handler(commands=["getapk"])
 def send_apk_link(message):
     user_id = message.chat.id
-    messages = get_messages()
     apk_links = get_apk_links()
 
-    # Check if user sent app name
+    print("🔍 Debug: Received APK Links ->", apk_links)  # Debug Log
+
+    # Check if APK links are empty
+    if not apk_links:
+        bot.send_message(user_id, "⚠️ Error: Could not fetch APK data. Please try again later.")
+        return
+
     command_parts = message.text.split(" ")
     if len(command_parts) < 2:
         bot.send_message(user_id, "❌ Please use: /getapk app_name\nExample: /getapk instamax")
         return
-    
-    app_name = command_parts[1].lower().strip()  # Convert app name to lowercase
 
-    # Check if app exists
+    app_name = command_parts[1].lower().strip()
+    
+    print(f"🔍 Debug: User requested APK -> {app_name}")  # Debug Log
+
     if app_name not in apk_links:
         bot.send_message(user_id, f"❌ No APK found for '{app_name}'. Try another app.")
         return
 
+    apk_link = apk_links[app_name]
+
     if is_subscribed(user_id):
-        apk_link = apk_links[app_name]
         bot.send_message(user_id, f"📥 Download {app_name}:\n{apk_link}")
     else:
+        messages = get_messages()
         bot.send_message(user_id, messages["subscribe"].format(channel=CHANNEL_ID))
 
 # Auto-update notifier for multiple apps
