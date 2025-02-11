@@ -115,13 +115,11 @@ def handle_start(message):
         short_links = get_short_links()
 
         if short_code in short_links:
-            bot.send_message(message.chat.id, f"📥 Download Link: {short_links[short_code]}")
+            bot.send_message(message.chat.id, f"📥 **Download Your APK:** {short_links[short_code]}")
             return
     
     messages = get_messages()
-    markup = telebot.types.InlineKeyboardMarkup()
-    markup.add(telebot.types.InlineKeyboardButton("🔎 Get APK", callback_data="getapk"))
-    bot.send_message(message.chat.id, messages["start"], reply_markup=markup)
+    bot.send_message(message.chat.id, messages["start"])
 
 # 🔹 Direct APK Name Input
 @bot.message_handler(func=lambda message: True)
