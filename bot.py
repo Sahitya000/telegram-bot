@@ -115,6 +115,29 @@ def handle_direct_link(message):
     else:
         bot.send_message(message.chat.id, " You are not allowed to send links.❌")
 
+
+# 🔹 Handle /applist Command
+@bot.message_handler(commands=["applist"])
+def handle_applist(message):
+    user_id = message.chat.id
+    apk_links = get_apk_links()
+
+    if not apk_links:
+        bot.send_message(user_id, "⚠️ No APKs found in the repository.")
+        return
+
+    text = "📃 **Available APKs:**\n\n"
+    markup = telebot.types.InlineKeyboardMarkup()
+
+    for app_name, apk_link in apk_links.items():
+        text += f"🔹 **{app_name}**\n"
+        markup.add(telebot.types.InlineKeyboardButton(f"📥 Download {app_name}", url=apk_link))
+
+    bot.send_message(user_id, text, reply_markup=markup, parse_mode="Markdown")
+
+
+
+
 # 🔹 Handle /start → Check Subscription for Short Links
 @bot.message_handler(commands=["start"])
 def handle_start(message):
