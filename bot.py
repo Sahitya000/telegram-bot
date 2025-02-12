@@ -137,21 +137,23 @@ def handle_start(message):
         messages = get_messages()
         bot.send_message(message.chat.id, messages["start"])
 
-# 🔹 Direct APK Name Input
+# 🔹 Direct APK Name Input (Case-insensitive Matching)
 @bot.message_handler(func=lambda message: True)
 def handle_apk_request(message):
     user_id = message.chat.id
     apk_links = get_apk_links()
 
-    app_name = message.text.lower().strip()
-    if app_name in apk_links:
-        apk_link = apk_links[app_name]
+    app_name = message.text.strip().lower()  # 🔹 Case-insensitive comparison
+    matching_apk = next((key for key in apk_links if key.lower() == app_name), None)
+
+    if matching_apk:
+        apk_link = apk_links[matching_apk]
 
         markup = telebot.types.InlineKeyboardMarkup()
         markup.add(telebot.types.InlineKeyboardButton("📥 Download APK", url=apk_link))
 
         if is_subscribed(user_id):
-            bot.send_message(user_id, f"📥 **Download {app_name}:**", reply_markup=markup)
+            bot.send_message(user_id, f"📥 **Download {matching_apk}:**", reply_markup=markup)
         else:
             messages = get_messages()
             bot.send_message(user_id, messages["subscribe"])
@@ -173,7 +175,7 @@ def handle_apk_upload(message):
     apk_links = get_apk_links()
     apk_links[file_name] = file_url
 
-    if update_github_apk_links(apk_links):
+    if update_short_links(apk_links):
         bot.send_message(CHANNEL_ID, f"✅ {file_name} added to APK database!")
     else:
         bot.send_message(CHANNEL_ID, "⚠️ Error updating APK list on GitHub.")
