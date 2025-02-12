@@ -6,6 +6,7 @@ import threading
 import time
 import base64
 import random
+import re
 import string
 
 # 🔹 Environment Variables
