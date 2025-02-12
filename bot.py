@@ -17,14 +17,12 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 GITHUB_MESSAGES_URL = "https://raw.githubusercontent.com/Sahitya000/telegram-bot/main/messages.json"
 GITHUB_APKS_URL = "https://raw.githubusercontent.com/Sahitya000/telegram-bot/main/apk_links.json"
 GITHUB_REPO_API = "https://api.github.com/repos/Sahitya000/telegram-bot/contents/apk_links.json"
+GITHUB_SHORTLINKS_API = "https://api.github.com/repos/Sahitya000/telegram-bot/contents/short_links.json"
 
 if not all([TOKEN, CHANNEL_ID, GITHUB_TOKEN]):
     raise ValueError("❌ ERROR: Please set BOT_TOKEN, CHANNEL_ID, and GITHUB_TOKEN in Railway!")
 
 bot = telebot.TeleBot(TOKEN)
-
-# 🔹 Storage for Short Links
-short_links = {}
 
 # 🔹 Load Messages from GitHub
 def get_messages():
@@ -35,9 +33,39 @@ def get_messages():
     except requests.RequestException:
         return {
             "start": "👋 Welcome! Click below to download your app:",
-            "subscribe": "❌ You must subscribe to get the APK. Join here: https://t.me/{channel}",
+            "subscribe": "❌ You must subscribe to get the APK. Join here: https://t.me/skmods_000",
             "update": "🔔 New APK Update Available: {app_name}\n📥 Download: {apk_link}"
         }
+
+# 🔹 Load Short Links from GitHub
+def get_short_links():
+    try:
+        response = requests.get(GITHUB_SHORTLINKS_API, headers={"Authorization": f"token {GITHUB_TOKEN}"}, timeout=5)
+        if response.status_code == 200:
+            content = response.json()
+            return json.loads(base64.b64decode(content["content"]).decode())
+    except requests.RequestException:
+        pass
+    return {}
+
+# 🔹 Update Short Links on GitHub
+def update_short_links(new_data):
+    headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
+    
+    response = requests.get(GITHUB_SHORTLINKS_API, headers=headers)
+    if response.status_code == 200:
+        content_data = response.json()
+        sha = content_data["sha"]
+
+        update_data = {
+            "message": "Updated Short Links",
+            "content": base64.b64encode(json.dumps(new_data, indent=4).encode()).decode(),
+            "sha": sha
+        }
+
+        update_response = requests.put(GITHUB_SHORTLINKS_API, headers=headers, json=update_data)
+        return update_response.status_code == 200
+    return False
 
 # 🔹 Load APK Links from GitHub
 def get_apk_links():
@@ -68,6 +96,9 @@ def is_admin(user_id):
 def generate_short_code():
     return ''.join(random.choices(string.ascii_letters + string.digits, k=6))
 
+# 🔹 Load Persistent Short Links
+short_links = get_short_links()
+
 # 🔹 Handle Direct APK Links → Only Admins Can Send
 @bot.message_handler(func=lambda message: message.text.startswith("http"))
 def handle_direct_link(message):
@@ -77,6 +108,7 @@ def handle_direct_link(message):
         original_link = message.text.strip()
         short_code = generate_short_code()
         short_links[short_code] = original_link
+        update_short_links(short_links)  # 🔄 Save Links to GitHub
         short_link = f"https://t.me/{bot.get_me().username}?start=link_{short_code}"
 
         bot.send_message(message.chat.id, f"✅ Short link created: {short_link}")
@@ -90,7 +122,7 @@ def handle_start(message):
 
     if text.startswith("/start link_"):
         short_code = text.replace("/start link_", "").strip()
-        
+
         if short_code in short_links:
             user_id = message.chat.id
             original_link = short_links[short_code]
@@ -122,7 +154,7 @@ def handle_apk_request(message):
             bot.send_message(user_id, f"📥 **Download {app_name}:**", reply_markup=markup)
         else:
             messages = get_messages()
-            bot.send_message(user_id, messages["subscribe"].format(channel=CHANNEL_ID))
+            bot.send_message(user_id, messages["subscribe"])
     else:
         bot.send_message(user_id, "❌ Koi APK nahi mila! Sahi naam likho ya /getapk use karo.")
 
@@ -145,25 +177,6 @@ def handle_apk_upload(message):
         bot.send_message(CHANNEL_ID, f"✅ {file_name} added to APK database!")
     else:
         bot.send_message(CHANNEL_ID, "⚠️ Error updating APK list on GitHub.")
-
-# 🔹 Update APK Links on GitHub
-def update_github_apk_links(new_data):
-    headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
-    
-    response = requests.get(GITHUB_REPO_API, headers=headers)
-    if response.status_code == 200:
-        content_data = response.json()
-        sha = content_data["sha"]
-        
-        update_data = {
-            "message": "Updated APK links",
-            "content": base64.b64encode(json.dumps(new_data, indent=4).encode()).decode(),
-            "sha": sha
-        }
-        
-        update_response = requests.put(GITHUB_REPO_API, headers=headers, json=update_data)
-        return update_response.status_code == 200
-    return False
 
 # 🔹 Background Thread: Auto-check for updates
 def check_for_updates():
