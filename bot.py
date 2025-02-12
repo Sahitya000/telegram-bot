@@ -113,7 +113,7 @@ def handle_direct_link(message):
 
         bot.send_message(message.chat.id, f"✅ Short link created: {short_link}")
     else:
-        bot.send_message(message.chat.id, "❌ You are not allowed to send links.")
+        bot.send_message(message.chat.id, " You are not allowed to send links.❌")
 
 # 🔹 Handle /start → Check Subscription for Short Links
 @bot.message_handler(commands=["start"])
@@ -130,7 +130,7 @@ def handle_start(message):
             if is_subscribed(user_id):
                 bot.send_message(user_id, f"✅ **Here is your download link:**\n{original_link}")
             else:
-                bot.send_message(user_id, f"❌ You must subscribe to get the APK.\nJoin here: https://t.me/skmods_000")
+                bot.send_message(user_id, f" You must subscribe to get the APK.\nJoin here: https://t.me/skmods_000")
         else:
             bot.send_message(message.chat.id, "❌ Invalid or expired link.")
     else:
@@ -158,7 +158,7 @@ def handle_apk_request(message):
             messages = get_messages()
             bot.send_message(user_id, messages["subscribe"])
     else:
-        bot.send_message(user_id, "❌ Koi APK nahi mila! Sahi naam likho ya /getapk use karo.")
+        bot.send_message(user_id, "May be you entered wrong name or apk bot available this time try again later 😞\n send this message to @sks_000")
 
 # 🔹 Handle APK Uploads
 @bot.message_handler(content_types=["document"])
