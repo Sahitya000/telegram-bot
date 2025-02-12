@@ -8,6 +8,7 @@ import base64
 import random
 import string
 
+
 # 🔹 Environment Variables
 TOKEN = os.getenv("BOT_TOKEN")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
@@ -84,6 +85,14 @@ def is_subscribed(user_id):
     except telebot.apihelper.ApiTelegramException:
         return False
 
+# 🔹 Check if User is Admin
+def is_admin(user_id):
+    try:
+        chat_member = bot.get_chat_member(CHANNEL_ID, user_id)
+        return chat_member.status in ["administrator", "creator"]
+    except telebot.apihelper.ApiTelegramException:
+        return False
+
 # 🔹 Generate Random Short Code
 def generate_short_code():
     return ''.join(random.choices(string.ascii_letters + string.digits, k=6))
@@ -96,16 +105,16 @@ short_links = get_short_links()
 def handle_direct_link(message):
     user_id = message.chat.id
 
-    if is_subscribed(user_id):
+    if is_admin(user_id):  # ✅ Only Admins Allowed
         original_link = message.text.strip()
         short_code = generate_short_code()
         short_links[short_code] = original_link
-        update_short_links(short_links)
+        update_short_links(short_links)  # 🔄 Save Links to GitHub
         short_link = f"https://t.me/{bot.get_me().username}?start=link_{short_code}"
 
         bot.send_message(message.chat.id, f"✅ Short link created: {short_link}")
     else:
-        bot.send_message(message.chat.id, "❌ You must be subscribed to send links.")
+        bot.send_message(message.chat.id, " You are not allowed to send links.❌")
 
 # 🔹 Handle /start → Check Subscription for Short Links
 @bot.message_handler(commands=["start"])
@@ -122,12 +131,82 @@ def handle_start(message):
             if is_subscribed(user_id):
                 bot.send_message(user_id, f"✅ **Here is your download link:**\n{original_link}")
             else:
-                bot.send_message(user_id, "❌ You must subscribe to get the APK.\nJoin here: https://t.me/skmods_000")
+                bot.send_message(user_id, f" You must subscribe to get the APK.\nJoin here: https://t.me/skmods_000")
         else:
             bot.send_message(message.chat.id, "❌ Invalid or expired link.")
     else:
         messages = get_messages()
         bot.send_message(message.chat.id, messages["start"])
+        
+        #sahitya_app_link
+        
+@bot.message_handler(commands=["applist"])
+def handle_applist(message):
+    user_id = message.chat.id
+    apk_links = get_apk_links()
+
+    if not apk_links:
+        bot.send_message(user_id, "⚠️ No APKs found in the repository.")
+        return
+
+    if not is_subscribed(user_id):
+        messages = get_messages()
+        bot.send_message(user_id, messages["subscribe"])
+        return
+
+    text = "📱 **Available Apps:**\n\n"
+
+    for app_name, apk_link in apk_links.items():
+        text += f"🎯 **{app_name}**\n🔗 [Click here to download]({apk_link})\n\n"
+
+    bot.send_message(user_id, text, parse_mode="Markdown", disable_web_page_preview=True)
+
+
+
+    
+
+# 🔹 Direct APK Name Input (Case-insensitive Matching)
+@bot.message_handler(func=lambda message: True)
+def handle_apk_request(message):
+    user_id = message.chat.id
+    apk_links = get_apk_links()
+
+    app_name = message.text.strip().lower()  # 🔹 Case-insensitive comparison
+    matching_apk = next((key for key in apk_links if key.lower() == app_name), None)
+
+    if matching_apk:
+        apk_link = apk_links[matching_apk]
+
+        markup = telebot.types.InlineKeyboardMarkup()
+        markup.add(telebot.types.InlineKeyboardButton("📥 Download APK", url=apk_link))
+
+        if is_subscribed(user_id):
+            bot.send_message(user_id, f"📥 **Download {matching_apk}:**", reply_markup=markup)
+        else:
+            messages = get_messages()
+            bot.send_message(user_id, messages["subscribe"])
+    else:
+        bot.send_message(user_id, "     ⚠️ Error ⚠️\n May be you entered wrong name of apk not available for this time try again later 😞\n send this message to @sks_000")
+
+# 🔹 Handle APK Uploads
+@bot.message_handler(content_types=["document"])
+def handle_apk_upload(message):
+    if message.chat.id != int(CHANNEL_ID):
+        return
+
+    file_id = message.document.file_id
+    file_name = message.document.file_name.replace(" ", "_").lower()
+    
+    file_info = bot.get_file(file_id)
+    file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
+    
+    apk_links = get_apk_links()
+    apk_links[file_name] = file_url
+
+    if update_short_links(apk_links):
+        bot.send_message(CHANNEL_ID, f"✅ {file_name} added to APK database!")
+    else:
+        bot.send_message(CHANNEL_ID, "⚠️ Error updating APK list on GitHub.")
 
 # 🔹 Background Thread: Auto-check for updates
 def check_for_updates():
@@ -146,47 +225,5 @@ def check_for_updates():
 update_thread = threading.Thread(target=check_for_updates, daemon=True)
 update_thread.start()
 
-# 🔹 GitHub Config File URL
-GITHUB_CONFIG_URL = "https://raw.githubusercontent.com/Sahitya000/telegram-bot/main/config.json"
-
-# 🔹 GitHub se config.json load karne ka function
-def load_config():
-    try:
-        response = requests.get(GITHUB_CONFIG_URL, timeout=5)
-        response.raise_for_status()
-        return response.json()
-    except requests.RequestException:
-        return {}
-
-config = load_config()
-ADMIN_ID = config.get("admin_id", 0)
-GITHUB_USERS_URL = config.get("github_users_url", "")
-
-# 🔹 GitHub SHA fetch function
-def get_github_file_sha(url):
-    api_url = url.replace("raw.githubusercontent.com", "api.github.com/repos").replace("/main/", "/contents/")
-    response = requests.get(api_url)
-    return response.json().get("sha", "")
-
-# 🔹 GitHub users.json update function
-def update_github_users(users):
-    headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
-    
-    sha = get_github_file_sha(GITHUB_USERS_URL)
-    if not sha:
-        return False
-
-    update_data = {
-        "message": "Updated user list",
-        "content": base64.b64encode(json.dumps(users).encode()).decode(),
-        "sha": sha
-    }
-    
-    response = requests.put(GITHUB_USERS_URL.replace("raw.githubusercontent.com", "api.github.com/repos").replace("/main/", "/contents/"),
-                            headers=headers, json=update_data)
-    
-    return response.status_code == 200
-
-# 🔹 Start Bot
 print("🚀 Bot is running...")
 bot.polling()
