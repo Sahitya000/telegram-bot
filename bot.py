@@ -158,7 +158,7 @@ def handle_apk_request(message):
             messages = get_messages()
             bot.send_message(user_id, messages["subscribe"])
     else:
-        bot.send_message(user_id, "May be you entered wrong name or apk bot available this time try again later 😞\n send this message to @sks_000")
+        bot.send_message(user_id, "     ⚠️ Error ⚠️\n May be you entered wrong name of apk not available for this time try again later 😞\n send this message to @sks_000")
 
 # 🔹 Handle APK Uploads
 @bot.message_handler(content_types=["document"])
