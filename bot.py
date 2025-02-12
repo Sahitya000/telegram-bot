@@ -7,13 +7,13 @@ import time
 import base64
 import random
 import string
-import google.generativeai as genai  # ✅ Gemini AI ke liye import
+import openai
 
 # 🔹 Environment Variables
 TOKEN = os.getenv("BOT_TOKEN")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-GEN_AI_API_KEY = os.getenv("GEN_AI_API_KEY")  # ✅ Gemini AI ke liye API key
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # 🔥 NEW AI FEATURE
 
 # 🔹 GitHub URLs
 GITHUB_MESSAGES_URL = "https://raw.githubusercontent.com/Sahitya000/telegram-bot/main/messages.json"
@@ -21,13 +21,11 @@ GITHUB_APKS_URL = "https://raw.githubusercontent.com/Sahitya000/telegram-bot/mai
 GITHUB_REPO_API = "https://api.github.com/repos/Sahitya000/telegram-bot/contents/apk_links.json"
 GITHUB_SHORTLINKS_API = "https://api.github.com/repos/Sahitya000/telegram-bot/contents/short_links.json"
 
-if not all([TOKEN, CHANNEL_ID, GITHUB_TOKEN, GEN_AI_API_KEY]):
-    raise ValueError("❌ ERROR: Please set BOT_TOKEN, CHANNEL_ID, GITHUB_TOKEN, and GEN_AI_API_KEY in Railway!")
+if not all([TOKEN, CHANNEL_ID, GITHUB_TOKEN, OPENAI_API_KEY]):
+    raise ValueError("❌ ERROR: Please set BOT_TOKEN, CHANNEL_ID, GITHUB_TOKEN, and OPENAI_API_KEY!")
 
 bot = telebot.TeleBot(TOKEN)
-
-# ✅ Gemini AI Setup
-genai.configure(api_key=GEN_AI_API_KEY)
+openai.api_key = OPENAI_API_KEY  # ✅ AI Chat Setup
 
 # 🔹 Load Messages from GitHub
 def get_messages():
@@ -89,14 +87,6 @@ def is_subscribed(user_id):
     except telebot.apihelper.ApiTelegramException:
         return False
 
-# 🔹 Check if User is Admin
-def is_admin(user_id):
-    try:
-        chat_member = bot.get_chat_member(CHANNEL_ID, user_id)
-        return chat_member.status in ["administrator", "creator"]
-    except telebot.apihelper.ApiTelegramException:
-        return False
-
 # 🔹 Generate Random Short Code
 def generate_short_code():
     return ''.join(random.choices(string.ascii_letters + string.digits, k=6))
@@ -109,7 +99,7 @@ short_links = get_short_links()
 def handle_direct_link(message):
     user_id = message.chat.id
 
-    if is_admin(user_id):  # ✅ Only Admins Allowed
+    if is_subscribed(user_id):  # ✅ Only Subscribers Allowed
         original_link = message.text.strip()
         short_code = generate_short_code()
         short_links[short_code] = original_link
@@ -118,7 +108,7 @@ def handle_direct_link(message):
 
         bot.send_message(message.chat.id, f"✅ Short link created: {short_link}")
     else:
-        bot.send_message(message.chat.id, "❌ You are not allowed to send links.")
+        bot.send_message(message.chat.id, "❌ You must subscribe first.")
 
 # 🔹 Handle /start → Check Subscription for Short Links
 @bot.message_handler(commands=["start"])
@@ -142,44 +132,28 @@ def handle_start(message):
         messages = get_messages()
         bot.send_message(message.chat.id, messages["start"])
 
-# ✅ AI Chat Handler (Gemini AI)
-@bot.message_handler(func=lambda message: message.text.startswith("/ask"))
-def handle_ai_chat(message):
-    query = message.text.replace("/ask", "").strip()
+# 🔹 AI Chat Feature
+@bot.message_handler(commands=["chat"])
+def handle_chat(message):
+    query = message.text.replace("/chat", "").strip()
+    
     if not query:
-        bot.send_message(message.chat.id, "❌ Please provide a question. Example: /ask What is AI?")
+        bot.send_message(message.chat.id, "❌ Please enter a question after /chat.")
         return
 
-    bot.send_chat_action(message.chat.id, "typing")  # Show typing indicator
+    bot.send_chat_action(message.chat.id, "typing")
+
     try:
-        response = genai.chat(messages=[{"role": "user", "content": query}])
-        reply = response["candidates"][0]["message"]["content"]
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": query}]
+        )
+        answer = response["choices"][0]["message"]["content"]
+        bot.send_message(message.chat.id, answer)
     except Exception as e:
-        reply = "⚠️ AI is currently unavailable. Try again later!"
+        bot.send_message(message.chat.id, "⚠️ AI Chat Error. Please try again later.")
 
-    bot.send_message(message.chat.id, reply)
-
-# 🔹 Handle APK Uploads
-@bot.message_handler(content_types=["document"])
-def handle_apk_upload(message):
-    if message.chat.id != int(CHANNEL_ID):
-        return
-
-    file_id = message.document.file_id
-    file_name = message.document.file_name.replace(" ", "_").lower()
-    
-    file_info = bot.get_file(file_id)
-    file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
-    
-    apk_links = get_apk_links()
-    apk_links[file_name] = file_url
-
-    if update_short_links(apk_links):
-        bot.send_message(CHANNEL_ID, f"✅ {file_name} added to APK database!")
-    else:
-        bot.send_message(CHANNEL_ID, "⚠️ Error updating APK list on GitHub.")
-
-# 🔹 Background Thread: Auto-check for updates
+# 🔹 Background Thread: Auto-check for APK updates
 def check_for_updates():
     last_apks = get_apk_links()
     while True:
@@ -196,5 +170,5 @@ def check_for_updates():
 update_thread = threading.Thread(target=check_for_updates, daemon=True)
 update_thread.start()
 
-print("🚀 Bot is running with Gemini AI...")
+print("🚀 Bot is running...")
 bot.polling()
