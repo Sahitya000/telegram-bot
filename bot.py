@@ -13,7 +13,7 @@ import openai
 TOKEN = os.getenv("BOT_TOKEN")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # 🔥 NEW AI FEATURE
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # 🔥 AI Feature
 
 # 🔹 GitHub URLs
 GITHUB_MESSAGES_URL = "https://raw.githubusercontent.com/Sahitya000/telegram-bot/main/messages.json"
@@ -21,16 +21,17 @@ GITHUB_APKS_URL = "https://raw.githubusercontent.com/Sahitya000/telegram-bot/mai
 GITHUB_REPO_API = "https://api.github.com/repos/Sahitya000/telegram-bot/contents/apk_links.json"
 GITHUB_SHORTLINKS_API = "https://api.github.com/repos/Sahitya000/telegram-bot/contents/short_links.json"
 
+# ✅ Check for Missing Env Variables
 if not all([TOKEN, CHANNEL_ID, GITHUB_TOKEN, OPENAI_API_KEY]):
     raise ValueError("❌ ERROR: Please set BOT_TOKEN, CHANNEL_ID, GITHUB_TOKEN, and OPENAI_API_KEY!")
 
 bot = telebot.TeleBot(TOKEN)
-openai.api_key = OPENAI_API_KEY  # ✅ AI Chat Setup
+openai.api_key = OPENAI_API_KEY
 
-# 🔹 Load Messages from GitHub
+# 🔹 Load Messages
 def get_messages():
     try:
-        response = requests.get(GITHUB_MESSAGES_URL, timeout=5)
+        response = requests.get(GITHUB_MESSAGES_URL, timeout=10)
         response.raise_for_status()
         return response.json()
     except requests.RequestException:
@@ -40,10 +41,10 @@ def get_messages():
             "update": "🔔 New APK Update Available: {app_name}\n📥 Download: {apk_link}"
         }
 
-# 🔹 Load Short Links from GitHub
+# 🔹 Load Short Links
 def get_short_links():
     try:
-        response = requests.get(GITHUB_SHORTLINKS_API, headers={"Authorization": f"token {GITHUB_TOKEN}"}, timeout=5)
+        response = requests.get(GITHUB_SHORTLINKS_API, headers={"Authorization": f"token {GITHUB_TOKEN}"}, timeout=10)
         if response.status_code == 200:
             content = response.json()
             return json.loads(base64.b64decode(content["content"]).decode())
@@ -51,7 +52,7 @@ def get_short_links():
         pass
     return {}
 
-# 🔹 Update Short Links on GitHub
+# 🔹 Update Short Links
 def update_short_links(new_data):
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     
@@ -70,10 +71,10 @@ def update_short_links(new_data):
         return update_response.status_code == 200
     return False
 
-# 🔹 Load APK Links from GitHub
+# 🔹 Load APK Links
 def get_apk_links():
     try:
-        response = requests.get(GITHUB_APKS_URL, timeout=5)
+        response = requests.get(GITHUB_APKS_URL, timeout=10)
         response.raise_for_status()
         return response.json()
     except requests.RequestException:
@@ -87,7 +88,7 @@ def is_subscribed(user_id):
     except telebot.apihelper.ApiTelegramException:
         return False
 
-# 🔹 Generate Random Short Code
+# 🔹 Generate Short Code
 def generate_short_code():
     return ''.join(random.choices(string.ascii_letters + string.digits, k=6))
 
@@ -103,10 +104,11 @@ def handle_direct_link(message):
         original_link = message.text.strip()
         short_code = generate_short_code()
         short_links[short_code] = original_link
-        update_short_links(short_links)  # 🔄 Save Links to GitHub
-        short_link = f"https://t.me/{bot.get_me().username}?start=link_{short_code}"
-
-        bot.send_message(message.chat.id, f"✅ Short link created: {short_link}")
+        if update_short_links(short_links):  # 🔄 Save Links to GitHub
+            short_link = f"https://t.me/{bot.get_me().username}?start=link_{short_code}"
+            bot.send_message(message.chat.id, f"✅ Short link created: {short_link}")
+        else:
+            bot.send_message(message.chat.id, "❌ Error: Could not save short link.")
     else:
         bot.send_message(message.chat.id, "❌ You must subscribe first.")
 
@@ -151,7 +153,7 @@ def handle_chat(message):
         answer = response["choices"][0]["message"]["content"]
         bot.send_message(message.chat.id, answer)
     except Exception as e:
-        bot.send_message(message.chat.id, "⚠️ AI Chat Error. Please try again later.")
+        bot.send_message(message.chat.id, f"⚠️ AI Chat Error: {e}")
 
 # 🔹 Background Thread: Auto-check for APK updates
 def check_for_updates():
