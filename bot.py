@@ -56,19 +56,32 @@ def is_subscribed(user_id):
     except telebot.apihelper.ApiTelegramException:
         return False
 
+# 🔹 Check if User is Admin
+def is_admin(user_id):
+    try:
+        chat_member = bot.get_chat_member(CHANNEL_ID, user_id)
+        return chat_member.status in ["administrator", "creator"]
+    except telebot.apihelper.ApiTelegramException:
+        return False
+
 # 🔹 Generate Random Short Code
 def generate_short_code():
     return ''.join(random.choices(string.ascii_letters + string.digits, k=6))
 
-# 🔹 Handle Direct APK Links → Create Short Link
+# 🔹 Handle Direct APK Links → Only Admins Can Send
 @bot.message_handler(func=lambda message: message.text.startswith("http"))
 def handle_direct_link(message):
-    original_link = message.text.strip()
-    short_code = generate_short_code()
-    short_links[short_code] = original_link
-    short_link = f"https://t.me/{bot.get_me().username}?start=link_{short_code}"
-    
-    bot.send_message(message.chat.id, f"✅ Short link created: {short_link}")
+    user_id = message.chat.id
+
+    if is_admin(user_id):  # ✅ Only Admins Allowed
+        original_link = message.text.strip()
+        short_code = generate_short_code()
+        short_links[short_code] = original_link
+        short_link = f"https://t.me/{bot.get_me().username}?start=link_{short_code}"
+
+        bot.send_message(message.chat.id, f"✅ Short link created: {short_link}")
+    else:
+        bot.send_message(message.chat.id, "❌ You are not allowed to send links.")
 
 # 🔹 Handle /start → Check Subscription for Short Links
 @bot.message_handler(commands=["start"])
