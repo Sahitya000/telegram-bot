@@ -154,16 +154,17 @@ def handle_applist(message):
         bot.send_message(user_id, messages["subscribe"])
         return
 
-    text = "📱 **Available APKs**\n🔹 Select an app to download:\n\n"
-    
-    markup = telebot.types.InlineKeyboardMarkup(row_width=1)
+    markup = telebot.types.InlineKeyboardMarkup()
+
+    text = "📱 **Available Apps:**\n\n"
 
     for app_name, apk_link in apk_links.items():
-        text += f"◼️ **{app_name}**\n"
-        btn = telebot.types.InlineKeyboardButton(f"📥 Download {app_name}", url=apk_link)
+        text += f"🎯 **{app_name}**\n"
+        btn = telebot.types.InlineKeyboardButton("📥 Download", url=apk_link)
         markup.add(btn)
 
     bot.send_message(user_id, text, reply_markup=markup, parse_mode="Markdown")
+
 
     
 
