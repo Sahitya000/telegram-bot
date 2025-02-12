@@ -116,7 +116,7 @@ def handle_direct_link(message):
         bot.send_message(message.chat.id, " You are not allowed to send links.❌")
 
 
-# 🔹 Handle /applist Command
+# 🔹 Handle /applist Command (Unique Names + Subscription Check)
 @bot.message_handler(commands=["applist"])
 def handle_applist(message):
     user_id = message.chat.id
@@ -126,14 +126,29 @@ def handle_applist(message):
         bot.send_message(user_id, "⚠️ No APKs found in the repository.")
         return
 
+    # ✅ Extract unique app names (first word of filename)
+    unique_apps = {}
+    for full_name, apk_link in apk_links.items():
+        base_name = full_name.split("_")[0]  # Get first word before "_"
+        if base_name.lower() not in unique_apps:
+            unique_apps[base_name.lower()] = (base_name, apk_link)
+
+    # ✅ Subscription Check
+    if not is_subscribed(user_id):
+        messages = get_messages()
+        bot.send_message(user_id, messages["subscribe"])
+        return
+
+    # ✅ Prepare UI with Download Buttons
     text = "📃 **Available APKs:**\n\n"
     markup = telebot.types.InlineKeyboardMarkup()
 
-    for app_name, apk_link in apk_links.items():
+    for app_key, (app_name, apk_link) in unique_apps.items():
         text += f"🔹 **{app_name}**\n"
         markup.add(telebot.types.InlineKeyboardButton(f"📥 Download {app_name}", url=apk_link))
 
     bot.send_message(user_id, text, reply_markup=markup, parse_mode="Markdown")
+
 
 
 
