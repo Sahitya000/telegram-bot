@@ -7,7 +7,7 @@ import time
 import base64
 import random
 import string
-
+import TeleBot
 
 # 🔹 Environment Variables
 TOKEN = os.getenv("BOT_TOKEN")
