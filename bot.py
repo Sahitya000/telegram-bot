@@ -7,37 +7,25 @@ import time
 import base64
 import random
 import string
-import openai  # OpenAI API ke liye
+import openai  # ✅ OpenAI API Integrated
 
 # 🔹 Environment Variables
 TOKEN = os.getenv("BOT_TOKEN")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # 🔹 OpenAI API Key
-
-if not all([TOKEN, CHANNEL_ID, GITHUB_TOKEN, OPENAI_API_KEY]):
-    raise ValueError("❌ ERROR: Please set BOT_TOKEN, CHANNEL_ID, GITHUB_TOKEN, and OPENAI_API_KEY in Railway!")
-
-bot = telebot.TeleBot(TOKEN)
-
-# 🔹 OpenAI API Setup
-openai.api_key = OPENAI_API_KEY
-
-def chat_with_openai(user_input):
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": user_input}]
-        )
-        return response["choices"][0]["message"]["content"]
-    except Exception:
-        return "⚠️ AI error! Try again later."
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # ✅ OpenAI API Key
 
 # 🔹 GitHub URLs
 GITHUB_MESSAGES_URL = "https://raw.githubusercontent.com/Sahitya000/telegram-bot/main/messages.json"
 GITHUB_APKS_URL = "https://raw.githubusercontent.com/Sahitya000/telegram-bot/main/apk_links.json"
 GITHUB_REPO_API = "https://api.github.com/repos/Sahitya000/telegram-bot/contents/apk_links.json"
 GITHUB_SHORTLINKS_API = "https://api.github.com/repos/Sahitya000/telegram-bot/contents/short_links.json"
+
+if not all([TOKEN, CHANNEL_ID, GITHUB_TOKEN, OPENAI_API_KEY]):
+    raise ValueError("❌ ERROR: Please set BOT_TOKEN, CHANNEL_ID, GITHUB_TOKEN, and OPENAI_API_KEY!")
+
+bot = telebot.TeleBot(TOKEN)
+openai.api_key = OPENAI_API_KEY  # ✅ Initialize OpenAI API
 
 # 🔹 Load Messages from GitHub
 def get_messages():
@@ -51,6 +39,15 @@ def get_messages():
             "subscribe": "❌ You must subscribe to get the APK. Join here: https://t.me/skmods_000",
             "update": "🔔 New APK Update Available: {app_name}\n📥 Download: {apk_link}"
         }
+
+# 🔹 Load APK Links from GitHub
+def get_apk_links():
+    try:
+        response = requests.get(GITHUB_APKS_URL, timeout=5)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException:
+        return {}
 
 # 🔹 Load Short Links from GitHub
 def get_short_links():
@@ -82,15 +79,6 @@ def update_short_links(new_data):
         return update_response.status_code == 200
     return False
 
-# 🔹 Load APK Links from GitHub
-def get_apk_links():
-    try:
-        response = requests.get(GITHUB_APKS_URL, timeout=5)
-        response.raise_for_status()
-        return response.json()
-    except requests.RequestException:
-        return {}
-
 # 🔹 Check Subscription
 def is_subscribed(user_id):
     try:
@@ -99,27 +87,35 @@ def is_subscribed(user_id):
     except telebot.apihelper.ApiTelegramException:
         return False
 
-# 🔹 Check if User is Admin
-def is_admin(user_id):
-    try:
-        chat_member = bot.get_chat_member(CHANNEL_ID, user_id)
-        return chat_member.status in ["administrator", "creator"]
-    except telebot.apihelper.ApiTelegramException:
-        return False
-
 # 🔹 Generate Random Short Code
 def generate_short_code():
     return ''.join(random.choices(string.ascii_letters + string.digits, k=6))
 
-# 🔹 Load Persistent Short Links
-short_links = get_short_links()
+# 🔹 Handle OpenAI Chatbot
+@bot.message_handler(func=lambda message: message.text.startswith("/ask"))
+def handle_openai_chat(message):
+    user_id = message.chat.id
+    query = message.text.replace("/ask", "").strip()
 
-# 🔹 Handle Direct APK Links → Only Admins Can Send
+    if not query:
+        bot.send_message(user_id, "❌ Please provide a question after `/ask`.")
+        return
+
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": query}]
+        )
+        bot.send_message(user_id, response["choices"][0]["message"]["content"])
+    except Exception as e:
+        bot.send_message(user_id, f"❌ Error: {str(e)}")
+
+# 🔹 Handle Direct APK Links (Only Admins)
 @bot.message_handler(func=lambda message: message.text.startswith("http"))
 def handle_direct_link(message):
     user_id = message.chat.id
 
-    if is_admin(user_id):  # ✅ Only Admins Allowed
+    if is_subscribed(user_id):
         original_link = message.text.strip()
         short_code = generate_short_code()
         short_links[short_code] = original_link
@@ -128,9 +124,9 @@ def handle_direct_link(message):
 
         bot.send_message(message.chat.id, f"✅ Short link created: {short_link}")
     else:
-        bot.send_message(message.chat.id, "❌ You are not allowed to send links.")
+        bot.send_message(message.chat.id, "❌ You must subscribe to generate links.")
 
-# 🔹 Handle /start → Check Subscription for Short Links
+# 🔹 Handle /start Command
 @bot.message_handler(commands=["start"])
 def handle_start(message):
     text = message.text.strip()
@@ -145,49 +141,30 @@ def handle_start(message):
             if is_subscribed(user_id):
                 bot.send_message(user_id, f"✅ **Here is your download link:**\n{original_link}")
             else:
-                bot.send_message(user_id, "❌ You must subscribe to get the APK.\nJoin here: https://t.me/skmods_000")
+                bot.send_message(user_id, "❌ You must subscribe to get the APK.")
         else:
             bot.send_message(message.chat.id, "❌ Invalid or expired link.")
     else:
         messages = get_messages()
         bot.send_message(message.chat.id, messages["start"])
 
-# 🔹 Handle APK Name Requests
+# 🔹 Handle APK Requests
 @bot.message_handler(func=lambda message: True)
 def handle_apk_request(message):
     user_id = message.chat.id
     apk_links = get_apk_links()
 
     app_name = message.text.strip().lower()
-    matching_apk = next((key for key in apk_links if key.lower() == app_name), None)
-
-    if matching_apk:
-        apk_link = apk_links[matching_apk]
-
-        markup = telebot.types.InlineKeyboardMarkup()
-        markup.add(telebot.types.InlineKeyboardButton("📥 Download APK", url=apk_link))
-
+    if app_name in apk_links:
+        apk_link = apk_links[app_name]
         if is_subscribed(user_id):
-            bot.send_message(user_id, f"📥 **Download {matching_apk}:**", reply_markup=markup)
+            bot.send_message(user_id, f"📥 **Download {app_name}:** {apk_link}")
         else:
-            messages = get_messages()
-            bot.send_message(user_id, messages["subscribe"])
+            bot.send_message(user_id, "❌ You must subscribe to get the APK.")
     else:
-        bot.send_message(user_id, "⚠️ Error! APK not found. Contact @sks_000")
+        bot.send_message(user_id, "❌ APK not found.")
 
-# 🔹 Handle AI Chatbot (/chat command)
-@bot.message_handler(commands=["chat"])
-def handle_chat(message):
-    user_text = message.text.replace("/chat", "").strip()
-
-    if user_text:
-        bot.send_chat_action(message.chat.id, "typing")
-        ai_response = chat_with_openai(user_text)
-        bot.send_message(message.chat.id, ai_response)
-    else:
-        bot.send_message(message.chat.id, "⚡ Use: `/chat Your message` to chat with AI!")
-
-# 🔹 Background Thread: Auto-check for updates
+# 🔹 Auto Check for APK Updates
 def check_for_updates():
     last_apks = get_apk_links()
     while True:
