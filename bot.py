@@ -116,7 +116,8 @@ def handle_direct_link(message):
         bot.send_message(message.chat.id, " You are not allowed to send links.❌")
 
 
-# 🔹 Handle /applist Command (Unique Names + Subscription Check)
+# sahitya_applist
+
 @bot.message_handler(commands=["applist"])
 def handle_applist(message):
     user_id = message.chat.id
@@ -126,12 +127,12 @@ def handle_applist(message):
         bot.send_message(user_id, "⚠️ No APKs found in the repository.")
         return
 
-    # ✅ Extract unique app names (first word of filename)
+    # ✅ Extract Base Name Without Variants (e.g., 'YouTube', 'Snapchat')
     unique_apps = {}
     for full_name, apk_link in apk_links.items():
-        base_name = full_name.split("_")[0]  # Get first word before "_"
-        if base_name.lower() not in unique_apps:
-            unique_apps[base_name.lower()] = (base_name, apk_link)
+        base_name = re.split(r'[\s\-_\.]+', full_name, maxsplit=1)[0].lower()  # First word
+        if base_name not in unique_apps:
+            unique_apps[base_name] = (full_name, apk_link)
 
     # ✅ Subscription Check
     if not is_subscribed(user_id):
