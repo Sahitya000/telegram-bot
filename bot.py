@@ -225,5 +225,110 @@ def check_for_updates():
 update_thread = threading.Thread(target=check_for_updates, daemon=True)
 update_thread.start()
 
+
+#sahitya_broadcast
+
+# 🔹 GitHub Config File URL
+GITHUB_CONFIG_URL = "https://raw.githubusercontent.com/Sahitya000/telegram-bot/main/config.json"
+
+# 🔹 GitHub se config.json load karne ka function
+def load_config():
+    try:
+        response = requests.get(GITHUB_CONFIG_URL, timeout=5)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException:
+        return {}
+
+# 🔹 Config Load Karo
+config = load_config()
+ADMIN_ID = config.get("admin_id", 0)  # Default 0 agar na mile
+GITHUB_USERS_URL = config.get("github_users_url", "")
+
+bot = TeleBot(os.getenv("BOT_TOKEN"))  # Bot token environment se lo
+
+# 🔹 Users.json load karne ka function
+def load_users():
+    try:
+        response = requests.get(GITHUB_USERS_URL, timeout=5)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException:
+        return []
+
+# 🔹 Bot start hone par user register ho
+@bot.message_handler(commands=["start"])
+def register_user(message):
+    user_id = message.chat.id
+    username = message.from_user.username or "No Username"
+    name = message.from_user.first_name or "Unknown"
+
+    users = load_users()
+
+    # Check karo ki user already exist hai ya nahi
+    if not any(u["id"] == user_id for u in users):
+        users.append({"id": user_id, "name": name, "username": username})
+        update_github_users(users)
+
+    bot.reply_to(message, "✅ Bot activated! Ab aapko important updates milenge.")
+
+# 🔹 GitHub users.json update function
+def update_github_users(users):
+    GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+    headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
+    update_data = {
+        "message": "Updated user list",
+        "content": base64.b64encode(json.dumps(users).encode()).decode(),
+        "sha": get_github_file_sha(GITHUB_USERS_URL)
+    }
+    
+    response = requests.put(GITHUB_USERS_URL.replace("raw.githubusercontent.com", "api.github.com/repos").replace("/main/", "/contents/"),
+                            headers=headers, json=update_data)
+    
+    return response.status_code == 200
+
+# 🔹 GitHub SHA fetch karne ka function
+def get_github_file_sha(url):
+    api_url = url.replace("raw.githubusercontent.com", "api.github.com/repos").replace("/main/", "/contents/")
+    response = requests.get(api_url)
+    return response.json().get("sha", "")
+
+# 🔹 Broadcast message command (Sirf admin ke liye)
+@bot.message_handler(commands=["broadcast"])
+def broadcast_message(message):
+    if message.from_user.id != ADMIN_ID:
+        bot.reply_to(message, "⚠️ Sirf admin hi ye command use kar sakta hai!")
+        return
+    
+    text = message.text.replace("/broadcast", "").strip()
+    if not text:
+        bot.reply_to(message, "⚠️ Broadcast ke liye message likhna zaroori hai!")
+        return
+    
+    users = load_users()
+    failed_count = 0
+
+    for user in users:
+        try:
+            bot.send_message(user["id"], f"📢 **Broadcast Message:**\n{text}", parse_mode="Markdown")
+            time.sleep(1)  # Rate limit avoid karne ke liye
+        except Exception:
+            failed_count += 1  # Agar user unavailable hai to count badhao
+
+    bot.reply_to(message, f"✅ Broadcast completed!\n🚀 Total users: {len(users)}\n❌ Failed: {failed_count}")
+
+
+
+
+
+
+
 print("🚀 Bot is running...")
 bot.polling()
+
+
+
+
+
+
+
