@@ -1,4 +1,5 @@
 pyTelegramBotAPI
 python-telegram-bot
+openai
 google-generativeai
 requests
