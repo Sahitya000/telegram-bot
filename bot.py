@@ -85,7 +85,7 @@ def handle_start(message):
             if is_subscribed(user_id):
                 bot.send_message(user_id, f"✅ **Here is your download link:**\n{original_link}")
             else:
-                bot.send_message(user_id, f"❌ You must subscribe to get the APK.\nJoin here: https://t.me/{CHANNEL_ID}")
+                bot.send_message(user_id, f"❌ You must subscribe to get the APK.\nJoin here: https://t.me/skmods_000")
         else:
             bot.send_message(message.chat.id, "❌ Invalid or expired link.")
     else:
