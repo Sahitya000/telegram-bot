@@ -7,7 +7,7 @@ import time
 import base64
 import random
 import string
-import re
+
 
 # 🔹 Environment Variables
 TOKEN = os.getenv("BOT_TOKEN")
@@ -137,6 +137,32 @@ def handle_start(message):
     else:
         messages = get_messages()
         bot.send_message(message.chat.id, messages["start"])
+        
+        #sahitya_app_link
+        
+@bot.message_handler(commands=["applist"])
+def handle_applist(message):
+    user_id = message.chat.id
+    apk_links = get_apk_links()
+
+    if not apk_links:
+        bot.send_message(user_id, "⚠️ No APKs found in the repository.")
+        return
+
+    if not is_subscribed(user_id):
+        messages = get_messages()
+        bot.send_message(user_id, messages["subscribe"])
+        return
+
+    text = "📃 **Available APKs:**\n"
+    markup = telebot.types.InlineKeyboardMarkup()
+
+    for app_name, apk_link in apk_links.items():
+        text += f"\n🔹 **{app_name}**"
+        markup.add(telebot.types.InlineKeyboardButton(f"📥 Download {app_name}", url=apk_link))
+
+    bot.send_message(user_id, text, reply_markup=markup, parse_mode="Markdown")
+    
 
 # 🔹 Direct APK Name Input (Case-insensitive Matching)
 @bot.message_handler(func=lambda message: True)
@@ -160,45 +186,6 @@ def handle_apk_request(message):
             bot.send_message(user_id, messages["subscribe"])
     else:
         bot.send_message(user_id, "     ⚠️ Error ⚠️\n May be you entered wrong name of apk not available for this time try again later 😞\n send this message to @sks_000")
-
-
-# sahitya app_list
-
-@bot.message_handler(commands=["applist"])
-def handle_applist(message):
-    user_id = message.chat.id
-    apk_links = get_apk_links()
-
-    if not apk_links:
-        bot.send_message(user_id, "⚠️ No APKs found in the repository.")
-        return
-
-    # ✅ Extract Base Name Without Variants (e.g., 'YouTube', 'Snapchat')
-    unique_apps = {}
-    for full_name, apk_link in apk_links.items():
-        base_name = re.split(r'[\s\-_\.]+', full_name, maxsplit=1)[0].lower()  # First word
-        if base_name not in unique_apps:
-            unique_apps[base_name] = (full_name, apk_link)
-
-    # ✅ Subscription Check
-    if not is_subscribed(user_id):
-        messages = get_messages()
-        bot.send_message(user_id, messages["subscribe"])
-        return
-
-    # ✅ Prepare UI with Download Buttons
-    text = "📃 **Available APKs:**\n\n"
-    markup = telebot.types.InlineKeyboardMarkup()
-
-    for app_key, (app_name, apk_link) in unique_apps.items():
-        text += f"🔹 **{app_name}**\n"
-        markup.add(telebot.types.InlineKeyboardButton(f"📥 Download {app_name}", url=apk_link))
-
-    bot.send_message(user_id, text, reply_markup=markup, parse_mode="Markdown")
-    
-
-
-
 
 # 🔹 Handle APK Uploads
 @bot.message_handler(content_types=["document"])
