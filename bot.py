@@ -172,7 +172,9 @@ def handle_apk_request(message):
     apk_links = get_apk_links()
 
     app_name = message.text.strip().lower()  # 🔹 Case-insensitive comparison
-    matching_apk = next((key for key in apk_links if key.lower() == app_name), None)
+    
+    # 🔹 Match the APK name based on exact or substring match
+    matching_apk = next((key for key in apk_links if app_name in key.lower()), None)
 
     if matching_apk:
         apk_link = apk_links[matching_apk]
@@ -186,7 +188,7 @@ def handle_apk_request(message):
             messages = get_messages()
             bot.send_message(user_id, messages["subscribe"])
     else:
-        bot.send_message(user_id, "     ⚠️ Error ⚠️\n May be you entered wrong name of apk not available for this time try again later 😞\n send this message to @sks_000")
+        bot.send_message(user_id, "⚠️ Error ⚠️\nMay be you entered wrong name of APK. Try again later 😞\nSend this message to @sks_000")
 
 # 🔹 Handle APK Uploads
 @bot.message_handler(content_types=["document"])
