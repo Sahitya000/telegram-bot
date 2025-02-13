@@ -29,6 +29,7 @@ bot = telebot.TeleBot(TOKEN)
 bot_username = "skmodss_bot"  # ✅ Manually Set Bot Username
 
 # 🔹 Get Short Links from GitHub
+# 🔹 Get Short Links from GitHub
 def get_short_links():
     try:
         response = requests.get(GITHUB_SHORTLINKS_API, timeout=5)
@@ -58,6 +59,15 @@ def update_short_links(new_data):
         return update_response.status_code == 200
     return False
 
+# 🔹 Get APK Links from GitHub
+def get_apk_links():
+    try:
+        response = requests.get(GITHUB_APKS_URL, timeout=5)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException:
+        return {}
+
 # 🔹 Check Subscription
 def is_subscribed(user_id):
     try:
@@ -82,25 +92,23 @@ def generate_short_code():
 short_links = get_short_links()
 
 # 🔹 Handle Direct APK Links → Only Admins Can Send
-@bot.message_handler(func=lambda message: "http" in message.text)
+@bot.message_handler(func=lambda message: message.text.startswith("http"))
 def handle_direct_link(message):
     user_id = message.chat.id
 
     if is_admin(user_id):  # ✅ Only Admins Allowed
-        parts = message.text.strip().split(" ")
-        if len(parts) < 2:
-            bot.send_message(message.chat.id, "⚠️ Please send APK name and link together.")
+        original_message = message.text.strip()
+        try:
+            apk_name, original_link = original_message.split(' ', 1)
+        except ValueError:
+            bot.send_message(message.chat.id, "❌ Please send the APK name followed by the link.")
             return
-        
-        apk_name = parts[0]  # 🔹 First part is the name
-        original_link = parts[1]  # 🔹 Second part is the link
-        
+
         short_code = generate_short_code()
         short_links[short_code] = {"name": apk_name, "link": original_link}
-        
         if update_short_links(short_links):  # 🔄 Save Links to GitHub
-            short_link = f"https://t.me/{bot_username}?start=link_{short_code}"
-            bot.send_message(message.chat.id, f"✅ Short link created:\n📌 {apk_name}\n🔗 {short_link}")
+            short_link = f"https://t.me/{bot.get_me().username}?start=link_{short_code}"
+            bot.send_message(message.chat.id, f"✅ Short link created: {short_link}\n🔹 Name: {apk_name}")
         else:
             bot.send_message(message.chat.id, "❌ Failed to update short links on GitHub.")
     else:
@@ -113,11 +121,9 @@ def handle_short_link(message):
     apk_links = get_short_links()  # 🔄 GitHub se latest data fetch karein
 
     if short_code in apk_links:
-        apk_name = apk_links[short_code]["name"]
-        apk_link = apk_links[short_code]["link"]
-        
+        apk_data = apk_links[short_code]
         if is_subscribed(message.chat.id):
-            bot.send_message(message.chat.id, f"📩 **Download {apk_name}:**\n\n📥 [Download APK]({apk_link})", parse_mode="Markdown")
+            bot.send_message(message.chat.id, f"✅ Here is your APK link:\n🔹 Name: {apk_data['name']}\n🔹 Link: {apk_data['link']}")
         else:
             bot.send_message(message.chat.id, "❌ You must join the channel first to get the APK link.")
     else:
@@ -125,7 +131,7 @@ def handle_short_link(message):
 
 # 🔹 Start Bot
 
-
+# 🔹 Bot Start
 
 # 🔹 Start Bot
 
