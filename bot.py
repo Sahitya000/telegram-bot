@@ -7,7 +7,7 @@ import time
 import base64
 import random
 import string
-
+from telebot.types import ForceReply
 
 # 🔹 Environment Variables
 TOKEN = os.getenv("BOT_TOKEN")
@@ -49,6 +49,7 @@ def get_short_links():
         pass
     return {}
 
+# 🔹 Update Short Links on GitHub
 # 🔹 Update Short Links on GitHub
 # 🔹 Update Short Links on GitHub
 def update_short_links(new_data):
@@ -119,6 +120,63 @@ def handle_direct_link(message):
             bot.send_message(message.chat.id, "❌ Invalid format! Use:\n`AppName http://example.com`", parse_mode="Markdown")
     else:
         bot.send_message(message.chat.id, "❌ You are not allowed to send links.")
+
+# 🔹 Handle Editing Request → Ask Admin What to Edit
+@bot.message_handler(commands=['editlink'])
+def ask_edit_option(message):
+    user_id = message.chat.id
+    if not is_admin(user_id):
+        bot.send_message(user_id, "❌ You are not allowed to edit links.")
+        return
+
+    args = message.text.split(" ", 1)
+    if len(args) < 2:
+        bot.send_message(user_id, "❌ Usage: `/editlink short_code`", parse_mode="Markdown")
+        return
+
+    short_code = args[1]
+    if short_code not in short_links:
+        bot.send_message(user_id, "❌ Short link not found.")
+        return
+
+    bot.send_message(user_id, "What do you want to edit? Reply with **Name** or **Link**.", parse_mode="Markdown",
+                     reply_markup=ForceReply(selective=True))
+    
+    bot.register_next_step_handler(message, process_edit_choice, short_code)
+
+# 🔹 Process Admin's Choice
+def process_edit_choice(message, short_code):
+    user_id = message.chat.id
+    choice = message.text.lower()
+
+    if choice not in ["name", "link"]:
+        bot.send_message(user_id, "❌ Invalid choice! Reply with **Name** or **Link**.")
+        return
+
+    bot.send_message(user_id, f"Send the new {choice} for `{short_code}`.", parse_mode="Markdown",
+                     reply_markup=ForceReply(selective=True))
+
+    bot.register_next_step_handler(message, process_edit_value, short_code, choice)
+
+# 🔹 Process New Name or Link
+def process_edit_value(message, short_code, choice):
+    user_id = message.chat.id
+    new_value = message.text.strip()
+
+    if choice == "link" and not new_value.startswith("http"):
+        bot.send_message(user_id, "❌ Invalid link! Make sure it starts with `http`.")
+        return
+
+    # Update in memory
+    short_links[short_code][choice] = new_value
+    update_short_links(short_links)  # 🔄 Save to GitHub
+
+    app_name = short_links[short_code]["name"]
+    apk_link = short_links[short_code]["link"]
+
+    bot.send_message(user_id, f"✅ **{choice.capitalize()} updated successfully!**\n\n"
+                              f"🔹 **App Name:** `{app_name}`\n"
+                              f"🔹 **Download Link:** `{apk_link}`", parse_mode="Markdown")
 
 
         #sahitya_app_link
