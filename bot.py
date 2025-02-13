@@ -40,14 +40,21 @@ def get_messages():
 
 # 🔹 Load Short Links from GitHub
 
+
+
+# 🔹 Load Short Links from GitHub
 def get_short_links():
     try:
-        response = requests.get(GITHUB_SHORTLINKS_API, headers={"Authorization": f"token {GITHUB_TOKEN}"}, timeout=5)
+        headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+        response = requests.get(GITHUB_SHORTLINKS_API, headers=headers, timeout=5)
         if response.status_code == 200:
             content = response.json()
-            return json.loads(base64.b64decode(content["content"]).decode())
-    except requests.RequestException:
-        pass
+            decoded_content = base64.b64decode(content["content"]).decode()
+            return json.loads(decoded_content)  # ✅ FIXED JSON PARSING
+        else:
+            print(f"⚠️ GitHub Fetch Error: {response.status_code}")
+    except requests.RequestException as e:
+        print(f"⚠️ Request Error: {str(e)}")
     return {}
 
 # 🔹 Update Short Links on GitHub
@@ -90,6 +97,11 @@ def handle_direct_link(message):
     # 🔹 Generate Short Link
     short_code = generate_short_code()
     short_links = get_short_links()
+
+    # ✅ FIXED: Ensure short_links is a dictionary
+    if not isinstance(short_links, dict):
+        short_links = {}
+
     short_links[short_code] = {"link": original_link}
     update_short_links(short_links)
 
@@ -106,6 +118,10 @@ def handle_start(message):
     if text.startswith("/start link_"):
         short_code = text.replace("/start link_", "")
         short_links = get_short_links()
+
+        # ✅ FIXED: Ensure short_links is a dictionary
+        if not isinstance(short_links, dict):
+            short_links = {}
 
         if short_code in short_links:
             bot.send_message(user_id, f"✅ Here is your download link:\n🔗 {short_links[short_code]['link']}")
