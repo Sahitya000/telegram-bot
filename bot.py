@@ -141,7 +141,7 @@ def handle_short_link(message):
         if is_subscribed(message.chat.id):
             bot.send_message(message.chat.id, f"✅ Here is your APK link:\n🔹 Name: {apk_data['name']}\n🔹 Link: {apk_data['link']}")
         else:
-            bot.send_message(message.chat.id, "❌ You must join the channel first to get the APK link.")
+            bot.send_message(message.chat.id, "❌You have not subscribed SkMods channel❌\n\nPlease subscribe channel and click on previous link\n\n\nClick for join channel https://t.me/skmods_000")
     else:
         bot.send_message(message.chat.id, "⚠️ Invalid or expired short link.")
 
