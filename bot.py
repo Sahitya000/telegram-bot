@@ -44,12 +44,6 @@ def get_messages():
 
 
 # 🔹 Get Short Links from GitHub
-
-
-# 🔹 Get Short Links from GitHub
-
-# 🔹 Fetch Short Links from GitHub
-# 🔹 Get Short Links from GitHub
 def get_short_links():
     try:
         response = requests.get(GITHUB_SHORTLINKS_API, timeout=5)
@@ -112,30 +106,25 @@ def generate_short_code():
 short_links = get_short_links()
 
 # 🔹 Handle Direct APK Links → Only Admins Can Send
-@bot.message_handler(func=lambda message: message.text.startswith("http"))
+# 🔹 Handle Direct APK Links → Only Admins Can Send
+@bot.message_handler(func=lambda message: ":" in message.text)
 def handle_direct_link(message):
     user_id = message.chat.id
 
     if is_admin(user_id):  # ✅ Only Admins Allowed
-        original_link = message.text.strip()
-        bot.send_message(message.chat.id, "📌 Send the APK name now:")
-        
-        @bot.message_handler(func=lambda msg: msg.chat.id == user_id)
-        def get_apk_name(msg):
-            apk_name = msg.text.strip()
+        try:
+            apk_name, original_link = map(str.strip, message.text.split(":", 1))  # 👈 APK Name aur Link split karein
+            
             short_code = generate_short_code()
-            
-            short_links[short_code] = {
-                "name": apk_name,
-                "url": original_link
-            }
-            
+            short_links[short_code] = {"name": apk_name, "link": original_link}  # ✅ Name + Link Store Karein
+
             if update_short_links(short_links):  # 🔄 Save Links to GitHub
                 short_link = f"https://t.me/{bot.get_me().username}?start=link_{short_code}"
-                bot.send_message(message.chat.id, f"✅ Short link created: {short_link}\n📌 **APK Name:** {apk_name}")
+                bot.send_message(message.chat.id, f"✅ Short link created:\n\n📌 **{apk_name}**\n🔗 {short_link}", parse_mode="Markdown")
             else:
                 bot.send_message(message.chat.id, "❌ Failed to update short links on GitHub.")
-
+        except ValueError:
+            bot.send_message(message.chat.id, "⚠️ Invalid format! Please use:\n`ApkName : Link`", parse_mode="Markdown")
     else:
         bot.send_message(message.chat.id, "❌ You are not allowed to send links.")
 
@@ -147,18 +136,13 @@ def handle_short_link(message):
 
     if short_code in apk_links:
         if is_subscribed(message.chat.id):
-            apk_data = apk_links[short_code]
-            bot.send_message(message.chat.id, f"✅ **{apk_data['name']}**\n📎 **Download:** {apk_data['url']}")
+            apk_info = apk_links[short_code]
+            bot.send_message(message.chat.id, f"✅ **{apk_info['name']}**\n📎 **Download:** {apk_info['link']}", parse_mode="Markdown")
         else:
             bot.send_message(message.chat.id, "❌ You must join the channel first to get the APK link.")
     else:
         bot.send_message(message.chat.id, "⚠️ Invalid or expired short link.")
 
-# 🔹 Start Bot
-
-# 🔹 Bot Start
-
-# 🔹 Start Bot
 
 # 🔹 Start Bot
 
