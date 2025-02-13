@@ -115,7 +115,7 @@ def handle_direct_link(message):
 
         bot.send_message(message.chat.id, f"✅ Short link created: {short_link}")
     else:
-        bot.send_message(message.chat.id, " You are not allowed to send links.❌")
+        bot.send_message(message.chat.id, "❌ You are not allowed to send links.")
 
 # 🔹 Handle /start → Check Subscription for Short Links
 @bot.message_handler(commands=["start"])
@@ -132,7 +132,7 @@ def handle_start(message):
             if is_subscribed(user_id):
                 bot.send_message(user_id, f"✅ **Here is your download link:**\n{original_link}")
             else:
-                bot.send_message(user_id, f" You must subscribe to get the APK.\nJoin here: https://t.me/skmods_000")
+                bot.send_message(user_id, "❌ You must subscribe to get the APK.\nJoin here: https://t.me/skmods_000")
         else:
             bot.send_message(message.chat.id, "❌ Invalid or expired link.")
     else:
@@ -160,88 +160,6 @@ def handle_applist(message):
 
     bot.send_message(user_id, text, parse_mode="Markdown", disable_web_page_preview=True)
 
-# 🔹 Direct APK Name Input (Case-insensitive Matching)
-@bot.message_handler(func=lambda message: True)
-def handle_apk_request(message):
-    user_id = message.chat.id
-    apk_links = get_apk_links()
-
-    app_name = message.text.strip().lower()  # 🔹 Case-insensitive comparison
-    matching_apk = next((key for key in apk_links if key.lower() == app_name), None)
-
-    if matching_apk:
-        apk_link = apk_links[matching_apk]
-
-        markup = telebot.types.InlineKeyboardMarkup()
-        markup.add(telebot.types.InlineKeyboardButton("📥 Download APK", url=apk_link))
-
-        if is_subscribed(user_id):
-            bot.send_message(user_id, f"📥 **Download {matching_apk}:**", reply_markup=markup)
-        else:
-            messages = get_messages()
-            bot.send_message(user_id, messages["subscribe"])
-    else:
-        bot.send_message(user_id, "⚠️ Error ⚠️\n May be you entered wrong name of apk not available for this time try again later 😞\n send this message to @sks_000")
-
-# 🔹 Handle APK Uploads
-@bot.message_handler(content_types=["document"])
-def handle_apk_upload(message):
-    if message.chat.id != int(CHANNEL_ID):
-        return
-
-    file_id = message.document.file_id
-    file_name = message.document.file_name.replace(" ", "_").lower()
-    
-    file_info = bot.get_file(file_id)
-    file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
-    
-    apk_links = get_apk_links()
-    apk_links[file_name] = file_url
-
-    if update_short_links(apk_links):
-        bot.send_message(CHANNEL_ID, f"✅ {file_name} added to APK database!")
-    else:
-        bot.send_message(CHANNEL_ID, "⚠️ Error updating APK list on GitHub.")
-
-# 🔹 Clear chat history if user leaves the channel
-def clear_chat_if_left(update: Update, context: CallbackContext):
-    user_id = update.effective_user.id
-    chat_id = update.effective_chat.id
-
-    # Check if the user is still a member of the channel
-    member = bot.get_chat_member(CHANNEL_ID, user_id)
-    
-    if member.status in ["left", "kicked"]:
-        # Delete all messages from this chat
-        messages = context.user_data.get("messages", [])
-
-        for msg_id in messages:
-            try:
-                bot.delete_message(chat_id, msg_id)
-                time.sleep(0.2)  # Avoid hitting Telegram API limits
-            except Exception as e:
-                print(f"Error deleting message {msg_id}: {e}")
-
-        # Clear stored messages
-        context.user_data["messages"] = []
-        print(f"Cleared chat history for user {user_id}")
-
-def track_messages(update: Update, context: CallbackContext):
-    """Track messages sent by the user for later deletion."""
-    message = update.message
-    if not message:
-        return
-    
-    # Store message IDs to delete later
-    if "messages" not in context.user_data:
-                context.user_data["messages"] = []
-    
-    context.user_data["messages"].append(message.message_id)
-
-dispatcher = Dispatcher(bot, None, workers=0)
-dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, track_messages))
-dispatcher.add_handler(MessageHandler(Filters.status_update, clear_chat_if_left))
-
 # 🔹 Background Thread: Auto-check for updates
 def check_for_updates():
     last_apks = get_apk_links()
@@ -260,4 +178,4 @@ update_thread = threading.Thread(target=check_for_updates, daemon=True)
 update_thread.start()
 
 print("🚀 Bot is running...")
-bot.polling()
+bot.polling(none_stop=True)
