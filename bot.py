@@ -129,7 +129,7 @@ def handle_start(message):
             original_link = short_links[short_code]
 
             if is_subscribed(user_id):
-                bot.send_message(user_id, f"✅ **Here is your download link:**\n{original_link}")
+                bot.send_message(user_id, f"✅ ℍ𝕖𝕣𝕖 𝕚𝕤 𝕪𝕠𝕦𝕣 𝕕𝕠𝕨𝕟𝕝𝕠𝕕 𝕝𝕚𝕟𝕜👇:\n{original_link}")
             else:
                 bot.send_message(user_id, f" You must subscribe to get the APK.\nJoin here: https://t.me/skmods_000")
         else:
