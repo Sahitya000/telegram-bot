@@ -39,15 +39,7 @@ def get_messages():
         }
 
 # 🔹 Load Short Links from GitHub
-def get_short_links():
-    try:
-        response = requests.get(GITHUB_SHORTLINKS_API, headers={"Authorization": f"token {GITHUB_TOKEN}"}, timeout=5)
-        if response.status_code == 200:
-            content = response.json()
-            return json.loads(base64.b64decode(content["content"]).decode())
-    except requests.RequestException:
-        pass
-    return {}
+
 
 # 🔹 Update Short Links on GitHub
 # 🔹 Update Short Links on GitHub
@@ -55,44 +47,44 @@ def get_short_links():
 
 
 # 🔹 Update Short Links on GitHub
+
 
 
 # 🔹 Bot Config
 
+# 🔹 Fetch Bot Username Automatically
+BOT_USERNAME = bot.get_me().username
 
-#
-
-# 🔹 Update Short Links in GitHub
-def update_short_links(new_data):
-    headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
-
-    # ✅ Get current file SHA
-    response = requests.get(GITHUB_SHORTLINKS_API, headers=headers)
-    if response.status_code == 200:
-        content_data = response.json()
-        sha = content_data.get("sha", "")
-
-        update_data = {
-            "message": "Updated Short Links",
-            "content": base64.b64encode(json.dumps(new_data, indent=4).encode()).decode(),
-            "sha": sha
-        }
-
-        update_response = requests.put(GITHUB_SHORTLINKS_API, headers=headers, json=update_data)
-        return update_response.status_code in [200, 201]
-    return False
+# 🔹 Generate Random Short Code
+def generate_short_code():
+    return ''.join(random.choices(string.ascii_letters + string.digits, k=6))
 
 # 🔹 Load Short Links from GitHub
 def get_short_links():
     try:
-        response = requests.get(GITHUB_SHORTLINKS_API, timeout=5)
+        headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
+        response = requests.get(GITHUB_SHORTLINKS_API, headers=headers, timeout=5)
         response.raise_for_status()
         content_data = response.json()
-        return json.loads(base64.b64decode(content_data['content']).decode())
+        return json.loads(base64.b64decode(content_data['content']).decode()), content_data.get("sha", "")
     except requests.RequestException:
-        return {}
+        return {}, ""
 
-short_links = get_short_links()
+# 🔹 Update Short Links on GitHub
+def update_short_links(new_data):
+    headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
+
+    current_links, sha = get_short_links()  # ✅ Fix SHA fetching
+    current_links.update(new_data)  # ✅ Merge new data
+
+    update_data = {
+        "message": "Updated Short Links",
+        "content": base64.b64encode(json.dumps(current_links, indent=4).encode()).decode(),
+        "sha": sha
+    }
+
+    response = requests.put(GITHUB_SHORTLINKS_API, headers=headers, json=update_data)
+    return response.status_code in [200, 201]
 
 # 🔹 Check if User is Subscribed
 def is_subscribed(user_id):
@@ -110,9 +102,8 @@ def is_admin(user_id):
     except telebot.apihelper.ApiTelegramException:
         return False
 
-# 🔹 Generate Random Short Code
-def generate_short_code():
-    return ''.join(random.choices(string.ascii_letters + string.digits, k=6))
+# 🔹 Load Persistent Short Links
+short_links, _ = get_short_links()
 
 # 🔹 Handle Direct APK Links → Only Admins
 @bot.message_handler(func=lambda message: " " in message.text and message.text.count(" ") == 1)
@@ -126,7 +117,7 @@ def handle_direct_link(message):
             short_links[short_code] = {"name": app_name, "link": original_link}
 
             if update_short_links(short_links):  # 🔄 Save Links to GitHub
-                short_link = f"https://t.me/{BOT_USERNAME}?start=link_{short_code}"  # ✅ Fix BOT_USERNAME
+                short_link = f"https://t.me/{BOT_USERNAME}?start=link_{short_code}"
                 bot.send_message(message.chat.id, f"✅ Short link created for **{app_name}**:\n{short_link}", parse_mode="Markdown")
             else:
                 bot.send_message(message.chat.id, "❌ Failed to update short links!")
@@ -158,7 +149,6 @@ def start_handler(message):
 # 🔹 Start the Bot
 
 
-# 🔹 Start the bot
 
 
         #sahitya_app_link
