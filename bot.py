@@ -107,7 +107,8 @@ short_links = get_short_links()
 
 # 🔹 Handle Direct APK Links → Only Admins Can Send
 # 🔹 Handle Direct APK Links → Only Admins Can Send
-@bot.message_handler(func=lambda message: " " in message.text and message.text.startswith("http"))
+# 🔹 Handle Direct APK Links → Only Admins Can Send
+@bot.message_handler(func=lambda message: " " in message.text and message.text.split(" ", 1)[1].startswith("http"))
 def handle_direct_link(message):
     user_id = message.chat.id
 
@@ -130,20 +131,6 @@ def handle_direct_link(message):
     else:
         bot.send_message(message.chat.id, "❌ You are not allowed to send links.")
 
-# 🔹 Handle Short Links for Users
-@bot.message_handler(func=lambda message: message.text.startswith("/start link_"))
-def handle_short_link(message):
-    short_code = message.text.split("_")[-1]
-    apk_links = get_short_links()  # 🔄 Fetch latest data from GitHub
-
-    if short_code in apk_links:
-        if is_subscribed(message.chat.id):
-            apk_data = apk_links[short_code]
-            bot.send_message(message.chat.id, f"✅ *{apk_data['name']}*\n🔗 [Download Now]({apk_data['link']})", parse_mode="Markdown")
-        else:
-            bot.send_message(message.chat.id, "❌ You must join the channel first to get the APK link.")
-    else:
-        bot.send_message(message.chat.id, "⚠️ Invalid or expired short link.")
 
 # 🔹 Start Bot
 
