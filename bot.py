@@ -26,9 +26,6 @@ if not all([TOKEN, CHANNEL_ID, GITHUB_TOKEN]):
 bot = telebot.TeleBot(TOKEN)
 
 
-bot_username = "skmodss_bot"  # ✅ Manually Set Bot Username
-
-# 🔹 Get Short Links from GitHub
 # 🔹 Get Short Links from GitHub
 def get_short_links():
     try:
@@ -92,7 +89,7 @@ def generate_short_code():
 short_links = get_short_links()
 
 # 🔹 Handle Direct APK Links → Only Admins Can Send
-@bot.message_handler(func=lambda message: message.text.startswith("http"))
+@bot.message_handler(func=lambda message: 'http' in message.text)
 def handle_direct_link(message):
     user_id = message.chat.id
 
@@ -128,6 +125,10 @@ def handle_short_link(message):
             bot.send_message(message.chat.id, "❌ You must join the channel first to get the APK link.")
     else:
         bot.send_message(message.chat.id, "⚠️ Invalid or expired short link.")
+
+# 🔹 Start Bot
+
+
 
 # 🔹 Start Bot
 
