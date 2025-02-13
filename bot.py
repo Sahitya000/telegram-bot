@@ -257,4 +257,4 @@ bot = telebot.TeleBot(BOT_TOKEN)
 
 # 🔹 Start Bot
 print("🤖 Bot is running...")
-bot.polling(none_stop=True)
+bot.polling()
