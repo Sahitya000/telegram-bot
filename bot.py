@@ -51,6 +51,10 @@ def get_short_links():
 
 # 🔹 Update Short Links on GitHub
 # 🔹 Update Short Links on GitHub
+
+
+
+# 🔹 Update Short Links on GitHub
 def update_short_links(new_data):
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     
@@ -99,6 +103,15 @@ def generate_short_code():
     return ''.join(random.choices(string.ascii_letters + string.digits, k=6))
 
 # 🔹 Load Persistent Short Links
+def get_short_links():
+    try:
+        response = requests.get(GITHUB_SHORTLINKS_API, timeout=5)
+        response.raise_for_status()
+        content_data = response.json()
+        return json.loads(base64.b64decode(content_data['content']).decode())
+    except requests.RequestException:
+        return {}
+
 short_links = get_short_links()
 
 # 🔹 Handle Direct APK Links → Only Admins Can Send
@@ -112,13 +125,35 @@ def handle_direct_link(message):
             short_code = generate_short_code()
             short_links[short_code] = {"name": app_name, "link": original_link}
             update_short_links(short_links)  # 🔄 Save Links to GitHub
-            short_link = f"https://t.me/{bot.get_me().username}?start=link_{short_code}"
+            short_link = f"https://t.me/{BOT_USERNAME}?start=link_{short_code}"  # ✅ Bot username fix
 
             bot.send_message(message.chat.id, f"✅ Short link created for **{app_name}**: {short_link}", parse_mode="Markdown")
         except ValueError:
             bot.send_message(message.chat.id, "❌ Invalid format! Use:\n`AppName http://example.com`", parse_mode="Markdown")
     else:
         bot.send_message(message.chat.id, "❌ You are not allowed to send links.")
+
+# 🔹 Handle Short Link Access (/start link_SHORTCODE)
+@bot.message_handler(commands=['start'])
+def start_handler(message):
+    args = message.text.split(" ")
+    
+    if len(args) > 1 and args[1].startswith("link_"):
+        short_code = args[1][5:]  # Remove 'link_' prefix
+        
+        if short_code in short_links:
+            user_id = message.chat.id
+            if is_subscribed(user_id):
+                original_link = short_links[short_code]["link"]
+                bot.send_message(user_id, f"🔗 Here is your download link:\n{original_link}")
+            else:
+                bot.send_message(user_id, f"❌ You must join our channel first: {CHANNEL_ID}")
+        else:
+            bot.send_message(message.chat.id, "❌ Invalid short link!")
+    else:
+        bot.send_message(message.chat.id, "👋 Welcome! Use this bot to generate short links.")
+
+# 🔹 Start the bot
 
 
         #sahitya_app_link
