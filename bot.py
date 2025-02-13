@@ -50,6 +50,7 @@ def get_short_links():
     return {}
 
 # 🔹 Update Short Links on GitHub
+# 🔹 Update Short Links on GitHub
 def update_short_links(new_data):
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     
@@ -101,43 +102,25 @@ def generate_short_code():
 short_links = get_short_links()
 
 # 🔹 Handle Direct APK Links → Only Admins Can Send
-@bot.message_handler(func=lambda message: message.text.startswith("http"))
+@bot.message_handler(func=lambda message: " " in message.text and message.text.count(" ") == 1)
 def handle_direct_link(message):
     user_id = message.chat.id
 
     if is_admin(user_id):  # ✅ Only Admins Allowed
-        original_link = message.text.strip()
-        short_code = generate_short_code()
-        short_links[short_code] = original_link
-        update_short_links(short_links)  # 🔄 Save Links to GitHub
-        short_link = f"https://t.me/{bot.get_me().username}?start=link_{short_code}"
+        try:
+            app_name, original_link = message.text.split(" ", 1)  # Extract app name and link
+            short_code = generate_short_code()
+            short_links[short_code] = {"name": app_name, "link": original_link}
+            update_short_links(short_links)  # 🔄 Save Links to GitHub
+            short_link = f"https://t.me/{bot.get_me().username}?start=link_{short_code}"
 
-        bot.send_message(message.chat.id, f"✅ Short link created: {short_link}")
+            bot.send_message(message.chat.id, f"✅ Short link created for **{app_name}**: {short_link}", parse_mode="Markdown")
+        except ValueError:
+            bot.send_message(message.chat.id, "❌ Invalid format! Use:\n`AppName http://example.com`", parse_mode="Markdown")
     else:
-        bot.send_message(message.chat.id, " You are not allowed to send links.❌")
+        bot.send_message(message.chat.id, "❌ You are not allowed to send links.")
 
-# 🔹 Handle /start → Check Subscription for Short Links
-@bot.message_handler(commands=["start"])
-def handle_start(message):
-    text = message.text.strip()
 
-    if text.startswith("/start link_"):
-        short_code = text.replace("/start link_", "").strip()
-
-        if short_code in short_links:
-            user_id = message.chat.id
-            original_link = short_links[short_code]
-
-            if is_subscribed(user_id):
-                bot.send_message(user_id, f"✅ ℍ𝕖𝕣𝕖 𝕚𝕤 𝕪𝕠𝕦𝕣 𝕕𝕠𝕨𝕟𝕝𝕠𝕕 𝕝𝕚𝕟𝕜👇:\n{original_link}")
-            else:
-                bot.send_message(user_id, f" You must subscribe to get the APK.\nJoin here: https://t.me/skmods_000")
-        else:
-            bot.send_message(message.chat.id, "❌ Invalid or expired link.")
-    else:
-        messages = get_messages()
-        bot.send_message(message.chat.id, messages["start"])
-        
         #sahitya_app_link
         
 @bot.message_handler(commands=["applist"])
@@ -172,9 +155,7 @@ def handle_apk_request(message):
     apk_links = get_apk_links()
 
     app_name = message.text.strip().lower()  # 🔹 Case-insensitive comparison
-    
-    # 🔹 Match the APK name based on exact or substring match
-    matching_apk = next((key for key in apk_links if app_name in key.lower()), None)
+    matching_apk = next((key for key in apk_links if key.lower() == app_name), None)
 
     if matching_apk:
         apk_link = apk_links[matching_apk]
@@ -188,7 +169,7 @@ def handle_apk_request(message):
             messages = get_messages()
             bot.send_message(user_id, messages["subscribe"])
     else:
-        bot.send_message(user_id, "⚠️ Error ⚠️\nMay be you entered wrong name of APK. Try again later 😞\nSend this message to @sks_000")
+        bot.send_message(user_id, "     ⚠️ Error ⚠️\n May be you entered wrong name of apk not available for this time try again later 😞\n send this message to @sks_000")
 
 # 🔹 Handle APK Uploads
 @bot.message_handler(content_types=["document"])
