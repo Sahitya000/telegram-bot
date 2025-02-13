@@ -38,52 +38,23 @@ def get_messages():
             "update": "🔔 New APK Update Available: {app_name}\n📥 Download: {apk_link}"
         }
 
-# 🔹 Load Short Links from GitHub
+# 
+
+# 🔹 Get Short Links from GitHub
 def get_short_links():
     try:
-        response = requests.get(GITHUB_SHORTLINKS_API, headers={"Authorization": f"token {GITHUB_TOKEN}"}, timeout=5)
-        if response.status_code == 200:
-            content = response.json()
-            return json.loads(base64.b64decode(content["content"]).decode())
-    except requests.RequestException:
-        pass
-    return {}
-
-
-
-# 🔹 Update Short Links on GitHub
-def update_short_links(new_data):
-    headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
-    
-    response = requests.get(GITHUB_SHORTLINKS_API, headers=headers)
-    if response.status_code == 200:
-        content_data = response.json()
-        sha = content_data["sha"]
-
-        update_data = {
-            "message": "Updated Short Links",
-            "content": base64.b64encode(json.dumps(new_data, indent=4).encode()).decode(),
-            "sha": sha
-        }
-
-        update_response = requests.put(GITHUB_SHORTLINKS_API, headers=headers, json=update_data)
-        return update_response.status_code == 200
-    return False
-
-# 🔹 Load APK Links from GitHub
-def get_apk_links():
-    try:
-        response = requests.get(GITHUB_APKS_URL, timeout=5)
+        response = requests.get(GITHUB_SHORTLINKS_API, timeout=5)
         response.raise_for_status()
-        return response.json()
+        content_data = response.json()
+        file_content = base64.b64decode(content_data["content"]).decode()
+        return json.loads(file_content)
     except requests.RequestException:
         return {}
 
-# 🔹 Check Subscription
 # 🔹 Update Short Links on GitHub
 def update_short_links(new_data):
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
-    
+
     response = requests.get(GITHUB_SHORTLINKS_API, headers=headers)
     if response.status_code == 200:
         content_data = response.json()
@@ -99,7 +70,7 @@ def update_short_links(new_data):
         return update_response.status_code == 200
     return False
 
-# 🔹 Load APK Links from GitHub
+# 🔹 Get APK Links from GitHub
 def get_apk_links():
     try:
         response = requests.get(GITHUB_APKS_URL, timeout=5)
@@ -140,12 +111,27 @@ def handle_direct_link(message):
         original_link = message.text.strip()
         short_code = generate_short_code()
         short_links[short_code] = original_link
-        update_short_links(short_links)  # 🔄 Save Links to GitHub
-        short_link = f"https://t.me/{bot.get_me().username}?start=link_{short_code}"
-
-        bot.send_message(message.chat.id, f"✅ Short link created: {short_link}")
+        if update_short_links(short_links):  # 🔄 Save Links to GitHub
+            short_link = f"https://t.me/{bot.get_me().username}?start=link_{short_code}"
+            bot.send_message(message.chat.id, f"✅ Short link created: {short_link}")
+        else:
+            bot.send_message(message.chat.id, "❌ Failed to update short links on GitHub.")
     else:
-        bot.send_message(message.chat.id, " You are not allowed to send links.❌")
+        bot.send_message(message.chat.id, "❌ You are not allowed to send links.")
+
+# 🔹 Handle Short Links for Users
+@bot.message_handler(func=lambda message: message.text.startswith("/start link_"))
+def handle_short_link(message):
+    short_code = message.text.split("_")[-1]
+    apk_links = get_short_links()  # 🔄 GitHub se latest data fetch karein
+
+    if short_code in apk_links:
+        if is_subscribed(message.chat.id):
+            bot.send_message(message.chat.id, f"✅ Here is your APK link: {apk_links[short_code]}")
+        else:
+            bot.send_message(message.chat.id, "❌ You must join the channel first to get the APK link.")
+    else:
+        bot.send_message(message.chat.id, "⚠️ Invalid or expired short link.")
 
 
 # 🔹 Bot Start
