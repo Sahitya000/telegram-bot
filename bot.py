@@ -7,7 +7,11 @@ import time
 import base64
 import random
 import string
-
+from telegram 
+import Update
+from telegram.ext 
+import CallbackContext
+import time
 
 # 🔹 Environment Variables
 TOKEN = os.getenv("BOT_TOKEN")
@@ -207,6 +211,50 @@ def handle_apk_upload(message):
         bot.send_message(CHANNEL_ID, f"✅ {file_name} added to APK database!")
     else:
         bot.send_message(CHANNEL_ID, "⚠️ Error updating APK list on GitHub.")
+        
+        
+        #auto_delete_sahitya
+        
+        CHANNEL_ID = "@skmods_000"  # Aapke channel ka username ya ID
+
+def clear_chat_if_left(update: Update, context: CallbackContext):
+    user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+
+    # Check if the user is still a member of the channel
+    member = context.bot.get_chat_member(CHANNEL_ID, user_id)
+    
+    if member.status in ["left", "kicked"]:
+        # Delete all messages from this chat
+        messages = context.user_data.get("messages", [])
+
+        for msg_id in messages:
+            try:
+                context.bot.delete_message(chat_id, msg_id)
+                time.sleep(0.2)  # Avoid hitting Telegram API limits
+            except Exception as e:
+                print(f"Error deleting message {msg_id}: {e}")
+
+        # Clear stored messages
+        context.user_data["messages"] = []
+        print(f"Cleared chat history for user {user_id}")
+
+def track_messages(update: Update, context: CallbackContext):
+    """Track messages sent by the user for later deletion."""
+    message = update.message
+    if not message:
+        return
+    
+    # Store message IDs to delete later
+    if "messages" not in context.user_data:
+        context.user_data["messages"] = []
+    
+    context.user_data["messages"].append(message.message_id)
+
+dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, track_messages))
+dispatcher.add_handler(MessageHandler(Filters.status_update, clear_chat_if_left))
+        
+        
 
 # 🔹 Background Thread: Auto-check for updates
 def check_for_updates():
@@ -227,6 +275,13 @@ update_thread.start()
 
 print("🚀 Bot is running...")
 bot.polling()
+
+
+
+
+
+
+
 
 
 
