@@ -7,8 +7,9 @@ import time
 import base64
 import random
 import string
-from telegram import Update
-from telegram.ext import CallbackContext, MessageHandler, Filters, Dispatcher
+from telegram 
+import Update from telegram.ext 
+import CallbackContext
 import time
 
 # 🔹 Environment Variables
