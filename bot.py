@@ -39,6 +39,7 @@ def get_messages():
         }
 
 # 🔹 Load Short Links from GitHub
+
 def get_short_links():
     try:
         response = requests.get(GITHUB_SHORTLINKS_API, headers={"Authorization": f"token {GITHUB_TOKEN}"}, timeout=5)
@@ -48,8 +49,6 @@ def get_short_links():
     except requests.RequestException:
         pass
     return {}
-
-
 
 # 🔹 Update Short Links on GitHub
 def update_short_links(new_data):
@@ -70,23 +69,6 @@ def update_short_links(new_data):
         return update_response.status_code == 200
     return False
 
-# 🔹 Load APK Links from GitHub
-def get_apk_links():
-    try:
-        response = requests.get(GITHUB_APKS_URL, timeout=5)
-        response.raise_for_status()
-        return response.json()
-    except requests.RequestException:
-        return {}
-
-# 🔹 Check Subscription
-def is_subscribed(user_id):
-    try:
-        chat_member = bot.get_chat_member(CHANNEL_ID, user_id)
-        return chat_member.status in ["member", "administrator", "creator"]
-    except telebot.apihelper.ApiTelegramException:
-        return False
-
 # 🔹 Check if User is Admin
 def is_admin(user_id):
     try:
@@ -99,31 +81,21 @@ def is_admin(user_id):
 def generate_short_code():
     return ''.join(random.choices(string.ascii_letters + string.digits, k=6))
 
-# 🔹 Load Persistent Short Links
-short_links = get_short_links()
-
-# 🔹 Handle Direct APK Links (Only Admins)
-@bot.message_handler(func=lambda message: message.text.startswith("http"))
+# 🔹 Direct APK Link (Only for Admins)
+@bot.message_handler(func=lambda message: message.text.startswith("http") and is_admin(message.chat.id))
 def handle_direct_link(message):
     user_id = message.chat.id
+    original_link = message.text.strip()
 
-    if is_admin(user_id):
-        bot.send_message(user_id, "🔹 Send the name of this APK:")
+    # 🔹 Generate Short Link
+    short_code = generate_short_code()
+    short_links = get_short_links()
+    short_links[short_code] = {"link": original_link}
+    update_short_links(short_links)
 
-        @bot.message_handler(func=lambda msg: msg.chat.id == user_id)
-        def handle_apk_name(msg):
-            app_name = msg.text.strip()
-            original_link = message.text.strip()
-            short_code = generate_short_code()
-
-            short_links[short_code] = {"name": app_name, "link": original_link}
-            update_short_links(short_links)
-
-            short_link = f"https://t.me/{bot.get_me().username}?start=link_{short_code}"
-            bot.send_message(user_id, f"✅ Short link created: {short_link}\n📌 APK Name: {app_name}")
-
-    else:
-        bot.send_message(user_id, "❌ You are not allowed to send links.")
+    # 🔹 Send Short Link to Admin
+    short_link = f"https://t.me/{bot.get_me().username}?start=link_{short_code}"
+    bot.send_message(user_id, f"✅ Short link created: {short_link}")
 
 # 🔹 Handle Short Link Click (User Access)
 @bot.message_handler(commands=["start"])
@@ -136,32 +108,12 @@ def handle_start(message):
         short_links = get_short_links()
 
         if short_code in short_links:
-            if is_subscribed(user_id):
-                bot.send_message(user_id, f"✅ Here is your download link:\n🔗 {short_links[short_code]['link']}")
-            else:
-                messages = get_messages()
-                bot.send_message(user_id, messages["subscribe"])
+            bot.send_message(user_id, f"✅ Here is your download link:\n🔗 {short_links[short_code]['link']}")
         else:
             bot.send_message(user_id, "⚠️ Invalid or expired short link.")
 
-# 🔹 Command: Show All Short Links (Admin Only)
-@bot.message_handler(commands=["shortlist"])
-def handle_shortlist(message):
-    user_id = message.chat.id
-    if not is_admin(user_id):
-        bot.send_message(user_id, "❌ You are not authorized to use this command.")
-        return
+# 🔹 Bot Start
 
-    short_links = get_short_links()
-    if not short_links:
-        bot.send_message(user_id, "⚠️ No short links found.")
-        return
-
-    text = "🔗 **Shortened APK Links:**\n\n"
-    for short_code, data in short_links.items():
-        text += f"📌 **{data['name']}**\n🔗 [Short Link](https://t.me/{bot.get_me().username}?start=link_{short_code})\n\n"
-
-    bot.send_message(user_id, text, parse_mode="Markdown", disable_web_page_preview=True)
 
 # 🔹 Bot Start
 
