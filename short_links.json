@@ -1,48 +1,22 @@
 {
-    "3eCEyL": "https://uploda.sh/rrYQ7sFa6V9X",
-    "8BpDP6": "https://skmodssofficial.blogspot.com/2023/12/instamax-v1030.html?m=1",
-    "nSgZeG": {
-        "name": "Skmods",
-        "link": "https://try.com"
+    "name": "short_links.json",
+    "path": "short_links.json",
+    "sha": "59aeda1af1582c1f9a18daa63f8a4a458ff615dc",
+    "size": 1042,
+    "url": "https://api.github.com/repos/Sahitya000/telegram-bot/contents/short_links.json?ref=main",
+    "html_url": "https://github.com/Sahitya000/telegram-bot/blob/main/short_links.json",
+    "git_url": "https://api.github.com/repos/Sahitya000/telegram-bot/git/blobs/59aeda1af1582c1f9a18daa63f8a4a458ff615dc",
+    "download_url": "https://raw.githubusercontent.com/Sahitya000/telegram-bot/main/short_links.json",
+    "type": "file",
+    "content": "ewogICAgIjNlQ0V5TCI6ICJodHRwczovL3VwbG9kYS5zaC9ycllRN3NGYTZW\nOVgiLAogICAgIjhCcERQNiI6ICJodHRwczovL3NrbW9kc3NvZmZpY2lhbC5i\nbG9nc3BvdC5jb20vMjAyMy8xMi9pbnN0YW1heC12MTAzMC5odG1sP209MSIs\nCiAgICAiblNnWmVHIjogewogICAgICAgICJuYW1lIjogIlNrbW9kcyIsCiAg\nICAgICAgImxpbmsiOiAiaHR0cHM6Ly90cnkuY29tIgogICAgfSwKICAgICJ0\nVWtYQlIiOiB7CiAgICAgICAgIm5hbWUiOiAiWW91VHViZSIsCiAgICAgICAg\nImxpbmsiOiAiaHR0cHM6Ly95dC5jb20iCiAgICB9LAogICAgIjZYVWVXUCI6\nIHsKICAgICAgICAibmFtZSI6ICJZb3VUdWJlMyIsCiAgICAgICAgImxpbmsi\nOiAiaHR0cHM6Ly95dC5jb20iCiAgICB9LAogICAgIk1BTEg5MiI6IHsKICAg\nICAgICAibmFtZSI6ICJZb3VUdWJlNSIsCiAgICAgICAgImxpbmsiOiAiaHR0\ncHM6Ly95dC5jb20iCiAgICB9LAogICAgIlBVVHRNYiI6IHsKICAgICAgICAi\nbmFtZSI6ICJZb3VUdWJlNyIsCiAgICAgICAgImxpbmsiOiAiaHR0cHM6Ly95\ndC5jb20iCiAgICB9LAogICAgIjRpNzFOVSI6IHsKICAgICAgICAibmFtZSI6\nICJZb3VUdWJlOCIsCiAgICAgICAgImxpbmsiOiAiaHR0cHM6Ly95dC5jb20i\nCiAgICB9LAogICAgIk1Ld2tYOSI6IHsKICAgICAgICAibmFtZSI6ICJZb3VU\ndWJlOCIsCiAgICAgICAgImxpbmsiOiAiaHR0cHM6Ly95dC5jb20iCiAgICB9\nLAogICAgIkxiNnlPNSI6IHsKICAgICAgICAibmFtZSI6ICJTYWhpdHlhIiwK\nICAgICAgICAibGluayI6ICJodHRwczovL3NhaGl0eWEiCiAgICB9LAogICAg\nIlNDQ3NsMiI6IHsKICAgICAgICAibmFtZSI6ICIvZWRpdGxpbmsiLAogICAg\nICAgICJsaW5rIjogImFiYyIKICAgIH0sCiAgICAiclF3bDE3IjogewogICAg\nICAgICJuYW1lIjogIi9lZGl0bGluayIsCiAgICAgICAgImxpbmsiOiAic2hv\ncnRfY29kZSIKICAgIH0sCiAgICAiYmxjWGl0IjogewogICAgICAgICJuYW1l\nIjogIi9lZGl0bGluayIsCiAgICAgICAgImxpbmsiOiAic2hvcnRfY29kZSIK\nICAgIH0KfQ==\n",
+    "encoding": "base64",
+    "_links": {
+        "self": "https://api.github.com/repos/Sahitya000/telegram-bot/contents/short_links.json?ref=main",
+        "git": "https://api.github.com/repos/Sahitya000/telegram-bot/git/blobs/59aeda1af1582c1f9a18daa63f8a4a458ff615dc",
+        "html": "https://github.com/Sahitya000/telegram-bot/blob/main/short_links.json"
     },
-    "tUkXBR": {
-        "name": "YouTube",
-        "link": "https://yt.com"
-    },
-    "6XUeWP": {
-        "name": "YouTube3",
-        "link": "https://yt.com"
-    },
-    "MALH92": {
-        "name": "YouTube5",
-        "link": "https://yt.com"
-    },
-    "PUTtMb": {
-        "name": "YouTube7",
-        "link": "https://yt.com"
-    },
-    "4i71NU": {
-        "name": "YouTube8",
-        "link": "https://yt.com"
-    },
-    "MKwkX9": {
-        "name": "YouTube8",
-        "link": "https://yt.com"
-    },
-    "Lb6yO5": {
-        "name": "Sahitya",
-        "link": "https://sahitya"
-    },
-    "SCCsl2": {
-        "name": "/editlink",
-        "link": "abc"
-    },
-    "rQwl17": {
-        "name": "/editlink",
-        "link": "short_code"
-    },
-    "blcXit": {
-        "name": "/editlink",
-        "link": "short_code"
+    "oexUjd": {
+        "name": "New",
+        "link": "https://example.com/premium.apk"
     }
 }
