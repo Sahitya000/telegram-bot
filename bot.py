@@ -25,6 +25,25 @@ if not all([TOKEN, CHANNEL_ID, GITHUB_TOKEN]):
 
 bot = telebot.TeleBot(TOKEN)
 
+# 🔹 Load Messages from GitHub
+def get_messages():
+    try:
+        response = requests.get(GITHUB_MESSAGES_URL, timeout=5)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException:
+        return {
+            "start": "👋 Welcome! Click below to download your app:",
+            "subscribe": "❌ You must subscribe to get the APK. Join here: https://t.me/skmods_000",
+            "update": "🔔 New APK Update Available: {app_name}\n📥 Download: {apk_link}"
+        }
+
+# 
+
+# 🔹 Get Short Links from GitHub
+
+
+
 
 # 🔹 Get Short Links from GitHub
 def get_short_links():
@@ -115,7 +134,7 @@ def handle_direct_link(message):
 @bot.message_handler(func=lambda message: message.text.startswith("/start link_"))
 def handle_short_link(message):
     short_code = message.text.split("_")[-1]
-    apk_links = get_short_links()  # 🔄 GitHub se latest data fetch karein
+    apk_links = get_short_links()  # 🔄 GitHub se latest data fetch karo
 
     if short_code in apk_links:
         apk_data = apk_links[short_code]
@@ -129,10 +148,6 @@ def handle_short_link(message):
 # 🔹 Start Bot
 
 
-
-# 🔹 Start Bot
-
-# 🔹 Bot Start
 
 # 🔹 Start Bot
 
