@@ -47,6 +47,8 @@ def get_messages():
 
 
 # 🔹 Get Short Links from GitHub
+
+# 🔹 Fetch Short Links from GitHub
 def get_short_links():
     try:
         response = requests.get(GITHUB_SHORTLINKS_API, timeout=5)
@@ -64,7 +66,7 @@ def update_short_links(new_data):
     response = requests.get(GITHUB_SHORTLINKS_API, headers=headers)
     if response.status_code == 200:
         content_data = response.json()
-        sha = content_data["sha"]
+        sha = content_data.get("sha", "")
 
         update_data = {
             "message": "Updated Short Links",
@@ -140,6 +142,8 @@ def handle_short_link(message):
             bot.send_message(message.chat.id, "❌ You must join the channel first to get the APK link.")
     else:
         bot.send_message(message.chat.id, "⚠️ Invalid or expired short link.")
+
+# 🔹 Start the Bot
 
 # 🔹 Start Bot
 
