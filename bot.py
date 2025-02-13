@@ -216,7 +216,8 @@ def handle_apk_upload(message):
 
 # 🔹 Background Thread: Auto-check for updates
 def check_for_updates():
-    last_apks = get_apk_links()
+    last_apks = get_short_links()  # ✅ Yeh sahi hai
+
     while True:
         apk_links = get_apk_links()
         messages = get_messages()
