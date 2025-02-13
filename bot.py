@@ -7,7 +7,7 @@ import time
 import base64
 import random
 import string
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+
 
 # 🔹 Environment Variables
 TOKEN = os.getenv("BOT_TOKEN")
@@ -49,7 +49,6 @@ def get_short_links():
         pass
     return {}
 
-# 🔹 Update Short Links on GitHub
 # 🔹 Update Short Links on GitHub
 # 🔹 Update Short Links on GitHub
 def update_short_links(new_data):
@@ -120,33 +119,6 @@ def handle_direct_link(message):
             bot.send_message(message.chat.id, "❌ Invalid format! Use:\n`AppName http://example.com`", parse_mode="Markdown")
     else:
         bot.send_message(message.chat.id, "❌ You are not allowed to send links.")
-
-# 🔹 Handle Short Link Access (Show Download Button Only)
-@bot.message_handler(func=lambda message: message.text.startswith("/start link_"))
-def handle_short_link(message):
-    user_id = message.chat.id
-    short_code = message.text.split("_")[-1]
-
-    if short_code in short_links:
-        apk_info = short_links[short_code]
-        app_name = apk_info["name"]
-        apk_link = apk_info["link"]
-
-        if is_subscribed(user_id):  # ✅ User Subscribed?
-            markup = InlineKeyboardMarkup()
-            download_button = InlineKeyboardButton("⬇️ Download Now", url=apk_link)
-            markup.add(download_button)
-
-            bot.send_message(user_id, f"**{app_name}**\n\n✅ Click below to download:", parse_mode="Markdown", reply_markup=markup)
-        else:
-            join_link = f"https://t.me/{CHANNEL_ID}"
-            markup = InlineKeyboardMarkup()
-            join_button = InlineKeyboardButton("🔥 Join Now", url=join_link)
-            markup.add(join_button)
-
-            bot.send_message(user_id, "❌ Pehle hamare channel ko join karo!", reply_markup=markup)
-    else:
-        bot.send_message(user_id, "❌ Invalid link!")
 
 
         #sahitya_app_link
@@ -237,24 +209,4 @@ update_thread = threading.Thread(target=check_for_updates, daemon=True)
 update_thread.start()
 
 print("🚀 Bot is running...")
-bot.polling()
-
-
-
-
-
-
-
-
-# 🔹 Bot & GitHub Config
-BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
-CHANNEL_ID = "@YourChannel"
-GITHUB_TOKEN = "YOUR_GITHUB_PERSONAL_ACCESS_TOKEN"
-GITHUB_SHORTLINKS_API = "https://api.github.com/repos/YOUR_GITHUB_USERNAME/YOUR_REPO/contents/apk_links.json"
-
-bot = telebot.TeleBot(BOT_TOKEN)
-
-
-# 🔹 Start Bot
-print("🤖 Bot is running...")
 bot.polling()
