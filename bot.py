@@ -49,8 +49,8 @@ def get_short_links():
         pass
     return {}
 
-# 🔹 Update Short Links on GitHub
-# 🔹 Update Short Links on GitHub
+
+
 # 🔹 Update Short Links on GitHub
 def update_short_links(new_data):
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
@@ -102,21 +102,68 @@ def generate_short_code():
 # 🔹 Load Persistent Short Links
 short_links = get_short_links()
 
-# 🔹 Handle Direct APK Links → Only Admins Can Send
+# 🔹 Handle Direct APK Links (Only Admins)
 @bot.message_handler(func=lambda message: message.text.startswith("http"))
 def handle_direct_link(message):
     user_id = message.chat.id
 
-    if is_admin(user_id):  # ✅ Only Admins Allowed
-        original_link = message.text.strip()
-        short_code = generate_short_code()
-        short_links[short_code] = original_link
-        update_short_links(short_links)  # 🔄 Save Links to GitHub
-        short_link = f"https://t.me/{bot.get_me().username}?start=link_{short_code}"
+    if is_admin(user_id):
+        bot.send_message(user_id, "🔹 Send the name of this APK:")
 
-        bot.send_message(message.chat.id, f"✅ Short link created: {short_link}")
+        @bot.message_handler(func=lambda msg: msg.chat.id == user_id)
+        def handle_apk_name(msg):
+            app_name = msg.text.strip()
+            original_link = message.text.strip()
+            short_code = generate_short_code()
+
+            short_links[short_code] = {"name": app_name, "link": original_link}
+            update_short_links(short_links)
+
+            short_link = f"https://t.me/{bot.get_me().username}?start=link_{short_code}"
+            bot.send_message(user_id, f"✅ Short link created: {short_link}\n📌 APK Name: {app_name}")
+
     else:
-        bot.send_message(message.chat.id, " You are not allowed to send links.❌")
+        bot.send_message(user_id, "❌ You are not allowed to send links.")
+
+# 🔹 Handle Short Link Click (User Access)
+@bot.message_handler(commands=["start"])
+def handle_start(message):
+    user_id = message.chat.id
+    text = message.text.strip()
+
+    if text.startswith("/start link_"):
+        short_code = text.replace("/start link_", "")
+        short_links = get_short_links()
+
+        if short_code in short_links:
+            if is_subscribed(user_id):
+                bot.send_message(user_id, f"✅ Here is your download link:\n🔗 {short_links[short_code]['link']}")
+            else:
+                messages = get_messages()
+                bot.send_message(user_id, messages["subscribe"])
+        else:
+            bot.send_message(user_id, "⚠️ Invalid or expired short link.")
+
+# 🔹 Command: Show All Short Links (Admin Only)
+@bot.message_handler(commands=["shortlist"])
+def handle_shortlist(message):
+    user_id = message.chat.id
+    if not is_admin(user_id):
+        bot.send_message(user_id, "❌ You are not authorized to use this command.")
+        return
+
+    short_links = get_short_links()
+    if not short_links:
+        bot.send_message(user_id, "⚠️ No short links found.")
+        return
+
+    text = "🔗 **Shortened APK Links:**\n\n"
+    for short_code, data in short_links.items():
+        text += f"📌 **{data['name']}**\n🔗 [Short Link](https://t.me/{bot.get_me().username}?start=link_{short_code})\n\n"
+
+    bot.send_message(user_id, text, parse_mode="Markdown", disable_web_page_preview=True)
+
+# 🔹 Bot Start
 
 
 
