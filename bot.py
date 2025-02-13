@@ -8,6 +8,7 @@ import base64
 import random
 import string
 
+
 # 🔹 Environment Variables
 TOKEN = os.getenv("BOT_TOKEN")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
@@ -36,37 +37,6 @@ def get_messages():
             "subscribe": "❌ You must subscribe to get the APK. Join here: https://t.me/skmods_000",
             "update": "🔔 New APK Update Available: {app_name}\n📥 Download: {apk_link}"
         }
-
-# 🔹 Load APK Links from GitHub
-def get_apk_links():
-    try:
-        response = requests.get(GITHUB_APKS_URL, timeout=5)
-        response.raise_for_status()
-        return response.json()
-    except requests.RequestException:
-        return {}
-
-# 🔹 Check Subscription
-def is_subscribed(user_id):
-    try:
-        chat_member = bot.get_chat_member(CHANNEL_ID, user_id)
-        return chat_member.status in ["member", "administrator", "creator"]
-    except telebot.apihelper.ApiTelegramException:
-        return False
-
-# 🔹 Handle /start Command
-@bot.message_handler(commands=["start"])
-def handle_start(message):
-    user_id = message.chat.id
-    if is_subscribed(user_id):
-        messages = get_messages()
-        bot.send_message(user_id, messages["start"])
-    else:
-        bot.send_message(user_id, messages["subscribe"])
-
-# 🔹 Generate Random Short Code
-def generate_short_code():
-    return ''.join(random.choices(string.ascii_letters + string.digits, k=6))
 
 # 🔹 Load Short Links from GitHub
 def get_short_links():
@@ -98,28 +68,61 @@ def update_short_links(new_data):
         return update_response.status_code == 200
     return False
 
-# 🔹 Handle Direct APK Links (Only Admins Can Send)
+# 🔹 Load APK Links from GitHub
+def get_apk_links():
+    try:
+        response = requests.get(GITHUB_APKS_URL, timeout=5)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException:
+        return {}
+
+# 🔹 Check Subscription
+def is_subscribed(user_id):
+    try:
+        chat_member = bot.get_chat_member(CHANNEL_ID, user_id)
+        return chat_member.status in ["member", "administrator", "creator"]
+    except telebot.apihelper.ApiTelegramException:
+        return False
+
+# 🔹 Check if User is Admin
+def is_admin(user_id):
+    try:
+        chat_member = bot.get_chat_member(CHANNEL_ID, user_id)
+        return chat_member.status in ["administrator", "creator"]
+    except telebot.apihelper.ApiTelegramException:
+        return False
+
+# 🔹 Generate Random Short Code
+def generate_short_code():
+    return ''.join(random.choices(string.ascii_letters + string.digits, k=6))
+
+# 🔹 Load Persistent Short Links
+short_links = get_short_links()
+
+# 🔹 Handle Direct APK Links → Only Admins Can Send
 @bot.message_handler(func=lambda message: message.text.startswith("http"))
 def handle_direct_link(message):
     user_id = message.chat.id
-    if is_subscribed(user_id):  # ✅ Check Admin Privileges
+
+    if is_admin(user_id):  # ✅ Only Admins Allowed
         original_link = message.text.strip()
         short_code = generate_short_code()
-        short_links = get_short_links()
         short_links[short_code] = original_link
-        update_short_links(short_links)  # 🔄 Save to GitHub
+        update_short_links(short_links)  # 🔄 Save Links to GitHub
         short_link = f"https://t.me/{bot.get_me().username}?start=link_{short_code}"
+
         bot.send_message(message.chat.id, f"✅ Short link created: {short_link}")
     else:
-        bot.send_message(message.chat.id, "❌ You must subscribe to generate links.")
+        bot.send_message(message.chat.id, " You are not allowed to send links.❌")
 
-# 🔹 Handle Short Links
+# 🔹 Handle /start → Check Subscription for Short Links
 @bot.message_handler(commands=["start"])
-def handle_short_link(message):
+def handle_start(message):
     text = message.text.strip()
+
     if text.startswith("/start link_"):
         short_code = text.replace("/start link_", "").strip()
-        short_links = get_short_links()
 
         if short_code in short_links:
             user_id = message.chat.id
@@ -128,40 +131,88 @@ def handle_short_link(message):
             if is_subscribed(user_id):
                 bot.send_message(user_id, f"✅ **Here is your download link:**\n{original_link}")
             else:
-                bot.send_message(user_id, "❌ You must subscribe to get the APK.\nJoin here: https://t.me/skmods_000")
+                bot.send_message(user_id, f" You must subscribe to get the APK.\nJoin here: https://t.me/skmods_000")
         else:
             bot.send_message(message.chat.id, "❌ Invalid or expired link.")
+    else:
+        messages = get_messages()
+        bot.send_message(message.chat.id, messages["start"])
+        
+        #sahitya_app_link
+        
+@bot.message_handler(commands=["applist"])
+def handle_applist(message):
+    user_id = message.chat.id
+    apk_links = get_apk_links()
 
-# 🔹 Auto-Delete Chats of Users Who Leave the Channel
-def delete_chats_for_left_users():
-    while True:
-        try:
-            updates = bot.get_updates()
-            user_ids = set(update.message.chat.id for update in updates if update.message)
+    if not apk_links:
+        bot.send_message(user_id, "⚠️ No APKs found in the repository.")
+        return
 
-            for user_id in user_ids:
-                if not is_subscribed(user_id):  # Agar user channel me nahi hai
-                    try:
-                        bot.send_message(user_id, "⚠️ You left the channel, deleting chat history.")
-                        time.sleep(2)  # Thoda delay taaki message visible rahe
+    if not is_subscribed(user_id):
+        messages = get_messages()
+        bot.send_message(user_id, messages["subscribe"])
+        return
 
-                        messages = bot.get_chat_history(user_id, limit=50)
-                        for msg in messages:
-                            bot.delete_message(user_id, msg.message_id)
+    text = "📱 **Available Apps:**\n\n"
 
-                        print(f"🗑 Deleted chat history for user: {user_id}")
+    for app_name, apk_link in apk_links.items():
+        text += f"🎯 **{app_name}**\n🔗 [Click here to download]({apk_link})\n\n"
 
-                    except Exception as e:
-                        print(f"⚠️ Error deleting messages for {user_id}: {e}")
+    bot.send_message(user_id, text, parse_mode="Markdown", disable_web_page_preview=True)
 
-        except Exception as e:
-            print(f"⚠️ Background Task Error: {e}")
 
-        time.sleep(3600)  # Har 1 ghante (3600 sec) me check karega
 
-# 🔹 Start Background Task
-delete_thread = threading.Thread(target=delete_chats_for_left_users, daemon=True)
-delete_thread.start()
+    
+
+# 🔹 Direct APK Name Input (Case-insensitive Matching)
+@bot.message_handler(func=lambda message: True)
+def handle_apk_request(message):
+    user_id = message.chat.id
+    apk_links = get_apk_links()
+
+    app_name = message.text.strip().lower()  # 🔹 Case-insensitive comparison
+    matching_apk = next((key for key in apk_links if key.lower() == app_name), None)
+
+    if matching_apk:
+        apk_link = apk_links[matching_apk]
+
+        markup = telebot.types.InlineKeyboardMarkup()
+        markup.add(telebot.types.InlineKeyboardButton("📥 Download APK", url=apk_link))
+
+        if is_subscribed(user_id):
+            bot.send_message(user_id, f"📥 **Download {matching_apk}:**", reply_markup=markup)
+        else:
+            messages = get_messages()
+            bot.send_message(user_id, messages["subscribe"])
+    else:
+        bot.send_message(user_id, "     ⚠️ Error ⚠️\n May be you entered wrong name of apk not available for this time try again later 😞\n send this message to @sks_000")
+
+# 🔹 Handle APK Uploads
+@bot.message_handler(content_types=["document"])
+def handle_apk_upload(message):
+    if message.chat.id != int(CHANNEL_ID):
+        return
+
+    file_id = message.document.file_id
+    file_name = message.document.file_name.replace(" ", "_").lower()
+    
+    file_info = bot.get_file(file_id)
+    file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
+    
+    apk_links = get_apk_links()
+    apk_links[file_name] = file_url
+
+    if update_short_links(apk_links):
+        bot.send_message(CHANNEL_ID, f"✅ {file_name} added to APK database!")
+    else:
+        bot.send_message(CHANNEL_ID, "⚠️ Error updating APK list on GitHub.")
+
+# 🔹 Background Thread: Auto-check for updates
+
 
 print("🚀 Bot is running...")
-bot.infinity_polling(skip_pending=True)
+bot.polling()
+
+
+
