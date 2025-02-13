@@ -51,9 +51,6 @@ def get_short_links():
 
 # 🔹 Update Short Links on GitHub
 # 🔹 Update Short Links on GitHub
-
-
-# 🔹 Update Short Links on GitHub
 def update_short_links(new_data):
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     
@@ -71,15 +68,6 @@ def update_short_links(new_data):
         update_response = requests.put(GITHUB_SHORTLINKS_API, headers=headers, json=update_data)
         return update_response.status_code == 200
     return False
-
-# 🔹 Load Short Links from GitHub
-def get_short_links():
-    try:
-        response = requests.get(GITHUB_SHORTLINKS_API, timeout=5)
-        response.raise_for_status()
-        return response.json()
-    except requests.RequestException:
-        return {}
 
 # 🔹 Load APK Links from GitHub
 def get_apk_links():
@@ -131,36 +119,6 @@ def handle_direct_link(message):
             bot.send_message(message.chat.id, "❌ Invalid format! Use:\n`AppName http://example.com`", parse_mode="Markdown")
     else:
         bot.send_message(message.chat.id, "❌ You are not allowed to send links.")
-
-# 🔹 Edit Existing Short Links → Only Admins Can Edit
-@bot.message_handler(commands=["editlink"])
-def edit_short_link(message):
-    user_id = message.chat.id
-
-    if is_admin(user_id):  # ✅ Only Admins Allowed
-        try:
-            _, short_code, new_app_name, new_link = message.text.split(" ", 3)
-
-            if short_code in short_links:
-                short_links[short_code] = {"name": new_app_name, "link": new_link}
-                update_short_links(short_links)  # 🔄 Save Links to GitHub
-
-                bot.send_message(
-                    message.chat.id,
-                    f"✅ Short link updated!\n**{new_app_name}** → {new_link}",
-                    parse_mode="Markdown"
-                )
-            else:
-                bot.send_message(message.chat.id, "❌ Short link not found!")
-        except ValueError:
-            bot.send_message(
-                message.chat.id,
-                "❌ Invalid format!\nUse: `/editlink short_code NewAppName NewLink`",
-                parse_mode="Markdown"
-            )
-    else:
-        bot.send_message(message.chat.id, "❌ You are not allowed to edit links.")
-
 
 
         #sahitya_app_link
