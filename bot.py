@@ -164,4 +164,4 @@ delete_thread = threading.Thread(target=delete_chats_for_left_users, daemon=True
 delete_thread.start()
 
 print("🚀 Bot is running...")
-bot.polling()
+bot.infinity_polling(skip_pending=True)
