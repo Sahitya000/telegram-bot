@@ -41,6 +41,9 @@ def get_messages():
 # 
 
 # 🔹 Get Short Links from GitHub
+
+
+# 🔹 Get Short Links from GitHub
 def get_short_links():
     try:
         response = requests.get(GITHUB_SHORTLINKS_API, timeout=5)
@@ -129,13 +132,13 @@ def handle_short_link(message):
         if is_subscribed(message.chat.id):
             bot.send_message(message.chat.id, f"✅ Here is your APK link: {apk_links[short_code]}")
         else:
-            bot.send_message(message.chat.id, "❌ Sorry You have not subscribed SkMods chanel❌ \nSubscribers channel and come back for you link.\nJoin here: https://t.me/skmods_000")
+            bot.send_message(message.chat.id, "❌ You must join the channel first to get the APK link.")
     else:
         bot.send_message(message.chat.id, "⚠️ Invalid or expired short link.")
 
+# 🔹 Start Bot
 
 # 🔹 Bot Start
-
 
 
         #sahitya_app_link
