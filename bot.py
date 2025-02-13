@@ -52,13 +52,17 @@ def get_short_links():
 # 🔹 Update Short Links on GitHub
 # 🔹 Update Short Links on GitHub
 # 🔹 Update Short Links on GitHub
+# 🔹 Update Short Links on GitHub
 def update_short_links(new_data):
-    headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
+    headers = {
+        "Authorization": f"token {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github.v3+json"
+    }
     
     response = requests.get(GITHUB_SHORTLINKS_API, headers=headers)
     if response.status_code == 200:
         content_data = response.json()
-        sha = content_data["sha"]
+        sha = content_data.get("sha", "")
 
         update_data = {
             "message": "Updated Short Links",
@@ -69,15 +73,6 @@ def update_short_links(new_data):
         update_response = requests.put(GITHUB_SHORTLINKS_API, headers=headers, json=update_data)
         return update_response.status_code == 200
     return False
-
-# 🔹 Load APK Links from GitHub
-def get_apk_links():
-    try:
-        response = requests.get(GITHUB_APKS_URL, timeout=5)
-        response.raise_for_status()
-        return response.json()
-    except requests.RequestException:
-        return {}
 
 # 🔹 Check Subscription
 def is_subscribed(user_id):
@@ -130,13 +125,15 @@ def ask_edit_option(message):
         return
 
     args = message.text.split(" ", 1)
-    if len(args) < 2:
+
+    if len(args) < 2 or not args[1].strip():
         bot.send_message(user_id, "❌ Usage: `/editlink short_code`", parse_mode="Markdown")
         return
 
-    short_code = args[1]
+    short_code = args[1].strip()
+    
     if short_code not in short_links:
-        bot.send_message(user_id, "❌ Short link not found.")
+        bot.send_message(user_id, f"❌ Short link `{short_code}` not found.", parse_mode="Markdown")
         return
 
     bot.send_message(user_id, "What do you want to edit? Reply with **Name** or **Link**.", parse_mode="Markdown",
@@ -178,7 +175,7 @@ def process_edit_value(message, short_code, choice):
                               f"🔹 **App Name:** `{app_name}`\n"
                               f"🔹 **Download Link:** `{apk_link}`", parse_mode="Markdown")
 
-
+# 🔹 Start Bot
         #sahitya_app_link
         
 @bot.message_handler(commands=["applist"])
@@ -271,3 +268,4 @@ update_thread.start()
 
 print("🚀 Bot is running...")
 bot.polling()
+
