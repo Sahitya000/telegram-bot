@@ -51,8 +51,6 @@ def get_short_links():
     except requests.RequestException:
         return {}
 
-
-# 🔹 Update Short Links on GitHub
 # 🔹 Update Short Links on GitHub
 def update_short_links(new_data):
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
@@ -71,6 +69,15 @@ def update_short_links(new_data):
         update_response = requests.put(GITHUB_SHORTLINKS_API, headers=headers, json=update_data)
         return update_response.status_code == 200
     return False
+
+# 🔹 Get APK Links from GitHub
+def get_apk_links():
+    try:
+        response = requests.get(GITHUB_APKS_URL, timeout=5)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException:
+        return {}
 
 # 🔹 Check Subscription
 def is_subscribed(user_id):
@@ -95,24 +102,20 @@ def generate_short_code():
 # 🔹 Load Persistent Short Links
 short_links = get_short_links()
 
-# 🔹 Handle Direct APK Links with Name → Only Admins Can Send
-@bot.message_handler(func=lambda message: "," in message.text)
+# 🔹 Handle Direct APK Links → Only Admins Can Send
+@bot.message_handler(func=lambda message: message.text.startswith("http"))
 def handle_direct_link(message):
     user_id = message.chat.id
 
     if is_admin(user_id):  # ✅ Only Admins Allowed
-        try:
-            apk_name, apk_link = map(str.strip, message.text.split(",", 1))
-            short_code = generate_short_code()
-            short_links[short_code] = {"name": apk_name, "link": apk_link}
-
-            if update_short_links(short_links):  # 🔄 Save to GitHub
-                short_link = f"https://t.me/{bot.get_me().username}?start=link_{short_code}"
-                bot.send_message(message.chat.id, f"✅ Short link created:\n\n📌 **{apk_name}**\n🔗 {short_link}", parse_mode="Markdown")
-            else:
-                bot.send_message(message.chat.id, "❌ Failed to update short links on GitHub.")
-        except ValueError:
-            bot.send_message(message.chat.id, "⚠️ Format Error! Use: `APK Name, APK Link`", parse_mode="Markdown")
+        original_link = message.text.strip()
+        short_code = generate_short_code()
+        short_links[short_code] = original_link
+        if update_short_links(short_links):  # 🔄 Save Links to GitHub
+            short_link = f"https://t.me/{bot.get_me().username}?start=link_{short_code}"
+            bot.send_message(message.chat.id, f"✅ Short link created: {short_link}")
+        else:
+            bot.send_message(message.chat.id, "❌ Failed to update short links on GitHub.")
     else:
         bot.send_message(message.chat.id, "❌ You are not allowed to send links.")
 
@@ -120,21 +123,15 @@ def handle_direct_link(message):
 @bot.message_handler(func=lambda message: message.text.startswith("/start link_"))
 def handle_short_link(message):
     short_code = message.text.split("_")[-1]
-    apk_links = get_short_links()  # 🔄 Fetch latest data from GitHub
+    apk_links = get_short_links()  # 🔄 GitHub se latest data fetch karein
 
     if short_code in apk_links:
         if is_subscribed(message.chat.id):
-            apk_name = apk_links[short_code]["name"]
-            apk_link = apk_links[short_code]["link"]
-            bot.send_message(message.chat.id, f"✅ **{apk_name}**\n🔗 {apk_link}", parse_mode="Markdown")
+            bot.send_message(message.chat.id, f"✅ Here is your APK link: {apk_links[short_code]}")
         else:
-            bot.send_message(message.chat.id, "❌ You must join the channel first to get the APK link.")
+            bot.send_message(message.chat.id, "❌ Sorry You have not subscribed SkMods chanel❌ \nSubscribers channel and come back for you link.\nJoin here: https://t.me/skmods_000")
     else:
         bot.send_message(message.chat.id, "⚠️ Invalid or expired short link.")
-
-# 🔹 Start Bot
-
-
 
 
 # 🔹 Bot Start
@@ -216,8 +213,7 @@ def handle_apk_upload(message):
 
 # 🔹 Background Thread: Auto-check for updates
 def check_for_updates():
-    last_apks = get_short_links()  # ✅ Yeh sahi hai
-
+    last_apks = get_apk_links()
     while True:
         apk_links = get_apk_links()
         messages = get_messages()
