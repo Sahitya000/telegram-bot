@@ -7,10 +7,8 @@ import time
 import base64
 import random
 import string
-from telegram 
-import Update from telegram.ext 
-import CallbackContext
-import time
+from telegram import Update
+from telegram.ext import CallbackContext, Dispatcher, MessageHandler, Filters
 
 # 🔹 Environment Variables
 TOKEN = os.getenv("BOT_TOKEN")
@@ -140,9 +138,7 @@ def handle_start(message):
     else:
         messages = get_messages()
         bot.send_message(message.chat.id, messages["start"])
-        
-        #sahitya_app_link
-        
+
 @bot.message_handler(commands=["applist"])
 def handle_applist(message):
     user_id = message.chat.id
@@ -163,10 +159,6 @@ def handle_applist(message):
         text += f"🎯 **{app_name}**\n🔗 [Click here to download]({apk_link})\n\n"
 
     bot.send_message(user_id, text, parse_mode="Markdown", disable_web_page_preview=True)
-
-
-
-    
 
 # 🔹 Direct APK Name Input (Case-insensitive Matching)
 @bot.message_handler(func=lambda message: True)
@@ -189,7 +181,7 @@ def handle_apk_request(message):
             messages = get_messages()
             bot.send_message(user_id, messages["subscribe"])
     else:
-        bot.send_message(user_id, "     ⚠️ Error ⚠️\n May be you entered wrong name of apk not available for this time try again later 😞\n send this message to @sks_000")
+        bot.send_message(user_id, "⚠️ Error ⚠️\n May be you entered wrong name of apk not available for this time try again later 😞\n send this message to @sks_000")
 
 # 🔹 Handle APK Uploads
 @bot.message_handler(content_types=["document"])
@@ -210,18 +202,14 @@ def handle_apk_upload(message):
         bot.send_message(CHANNEL_ID, f"✅ {file_name} added to APK database!")
     else:
         bot.send_message(CHANNEL_ID, "⚠️ Error updating APK list on GitHub.")
-        
-        
-        #auto_delete_sahitya
-        
-        CHANNEL_ID = "@skmods_000"  # Aapke channel ka username ya ID
 
+# 🔹 Clear chat history if user leaves the channel
 def clear_chat_if_left(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
 
     # Check if the user is still a member of the channel
-    member = context.bot.get_chat_member(CHANNEL_ID, user_id)
+    member = bot.get_chat_member(CHANNEL_ID, user_id)
     
     if member.status in ["left", "kicked"]:
         # Delete all messages from this chat
@@ -229,7 +217,7 @@ def clear_chat_if_left(update: Update, context: CallbackContext):
 
         for msg_id in messages:
             try:
-                context.bot.delete_message(chat_id, msg_id)
+                bot.delete_message(chat_id, msg_id)
                 time.sleep(0.2)  # Avoid hitting Telegram API limits
             except Exception as e:
                 print(f"Error deleting message {msg_id}: {e}")
@@ -246,14 +234,13 @@ def track_messages(update: Update, context: CallbackContext):
     
     # Store message IDs to delete later
     if "messages" not in context.user_data:
-        context.user_data["messages"] = []
+                context.user_data["messages"] = []
     
     context.user_data["messages"].append(message.message_id)
 
+dispatcher = Dispatcher(bot, None, workers=0)
 dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, track_messages))
 dispatcher.add_handler(MessageHandler(Filters.status_update, clear_chat_if_left))
-        
-        
 
 # 🔹 Background Thread: Auto-check for updates
 def check_for_updates():
@@ -274,13 +261,3 @@ update_thread.start()
 
 print("🚀 Bot is running...")
 bot.polling()
-
-
-
-
-
-
-
-
-
-
