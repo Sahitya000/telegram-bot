@@ -20,7 +20,7 @@ GITHUB_APKS_URL = "https://raw.githubusercontent.com/Sahitya000/telegram-bot/mai
 GITHUB_REPO_API = "https://api.github.com/repos/Sahitya000/telegram-bot/contents/apk_links.json"
 GITHUB_SHORTLINKS_API = "https://api.github.com/repos/Sahitya000/telegram-bot/contents/short_links.json"
 
-GITHUB_BLACKLIST_API = "https://raw.githubusercontent.com/Sahitya000/telegram-bot/main/blacklist.txt"
+GITHUB_BLACKLIST_API = "https://raw.githubusercontent.com/Sahitya000/telegram-bot/main/blacklist.json"
 
 if not all([TOKEN, CHANNEL_ID, GITHUB_TOKEN]):
     raise ValueError("❌ ERROR: Please set BOT_TOKEN, CHANNEL_ID, and GITHUB_TOKEN in Railway!")
@@ -112,20 +112,51 @@ def is_admin(user_id):
     except telebot.apihelper.ApiTelegramException:
         return False
         
-#🔹 Check if User is Blacklisted
+import random
+import string
+import requests
+import json
 
+# 🔹 GitHub se Blacklist Fetch Karne Ka URL
+
+# 🔹 Blacklisted Users Fetch Karne Ka Function
+def get_blacklisted_users():
+    try:
+        response = requests.get(BLACKLIST_URL, timeout=5)
+        response.raise_for_status()
+        return response.json()  # ✅ JSON me return karega
+    except requests.RequestException as e:
+        print(f"❌ Error fetching blacklist: {e}")
+        return []  # ⚠️ Agar error aaye to empty list return kare
+
+# 🔹 Blacklist Check Function
 def is_blacklisted(user_id):
     blacklisted_users = get_blacklisted_users()
+    print(f"🔍 Debug: Blacklisted Users = {blacklisted_users}")  # Debugging ke liye
     return str(user_id) in blacklisted_users
 
-# 🔹 Generate Random Short Code
+# 🔹 Random Short Code Generate
 def generate_short_code():
     return ''.join(random.choices(string.ascii_letters + string.digits, k=6))
 
-# 🔹 Load Persistent Short Links
-short_links = get_short_links()
+# 🔹 GitHub se Short Links Load Karna
+def get_short_links():
+    try:
+        response = requests.get("https://raw.githubusercontent.com/YOUR_GITHUB_USERNAME/YOUR_REPO/main/short_links.json")
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        print(f"❌ Error fetching short links: {e}")
+        return {}
 
-# 🔹 Handle Direct APK Links → Only Admins Can Send
+short_links = get_short_links()  # ✅ Initial Load
+
+# 🔹 Admin Check Function (Aapko isko define karna padega)
+def is_admin(user_id):
+    admin_list = [123456789, 987654321]  # Replace with actual admin IDs
+    return user_id in admin_list
+
+# 🔹 Handle Direct APK Links → Only Admins Allowed
 @bot.message_handler(func=lambda message: 'http' in message.text)
 def handle_direct_link(message):
     user_id = message.chat.id
@@ -135,23 +166,27 @@ def handle_direct_link(message):
         try:
             apk_name, original_link = original_message.split(' ', 1)
         except ValueError:
-            bot.send_message(message.chat.id, "❌ Please send the APK name followed by the link.")
+            bot.send_message(user_id, "❌ Please send the APK name followed by the link.")
             return
 
         short_code = generate_short_code()
         short_links[short_code] = {"name": apk_name, "link": original_link}
-        if update_short_links(short_links):  # 🔄 Save Links to GitHub
+        
+        # 🔄 Save Links to GitHub
+        if update_short_links(short_links):
             short_link = f"https://t.me/{bot.get_me().username}?start=link_{short_code}"
-            bot.send_message(message.chat.id, f"✅ Short link created: {short_link}\n🔹 Name: {apk_name}")
+            bot.send_message(user_id, f"✅ Short link created: {short_link}\n🔹 Name: {apk_name}")
         else:
-            bot.send_message(message.chat.id, "❌ Failed to update short links on GitHub.")
+            bot.send_message(user_id, "❌ Failed to update short links on GitHub.")
     else:
-        bot.send_message(message.chat.id, "❌ You are not allowed to send links.")
+        bot.send_message(user_id, "❌ You are not allowed to send links.")
 
 # 🔹 Handle Short Links for Users
 @bot.message_handler(func=lambda message: message.text.startswith("/start link_"))
 def handle_short_link(message):
     user_id = str(message.chat.id)  # Convert user_id to string for matching
+    print(f"🔍 Debug: User ID = {user_id}")  # Debugging ke liye
+
     short_code = message.text.split("_")[-1]
     apk_links = get_short_links()  # 🔄 GitHub se latest data fetch karo
 
@@ -164,11 +199,10 @@ def handle_short_link(message):
         if is_subscribed(message.chat.id):
             bot.send_message(message.chat.id, f"✅ Here is your APK link:\n🔹 Name: {apk_data['name']}\n🔹 Link: {apk_data['link']}")
         else:
-            bot.send_message(message.chat.id, "❌ You have not subscribed SkMods channel❌\n\nPlease subscribe channel and click on previous link\n\n\nClick for join channel https://t.me/skmods_000")
+            bot.send_message(message.chat.id, "❌ You have not subscribed SkMods channel❌\n\nPlease subscribe channel and click on previous link\n\nClick for join channel https://t.me/skmods_000")
     else:
         bot.send_message(message.chat.id, "⚠️ Invalid or expired short link.")
 
-# 🔹 Start Bot
 
 
 
