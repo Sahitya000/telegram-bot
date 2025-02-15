@@ -20,6 +20,9 @@ GITHUB_APKS_URL = "https://raw.githubusercontent.com/Sahitya000/telegram-bot/mai
 GITHUB_REPO_API = "https://api.github.com/repos/Sahitya000/telegram-bot/contents/apk_links.json"
 GITHUB_SHORTLINKS_API = "https://api.github.com/repos/Sahitya000/telegram-bot/contents/short_links.json"
 
+
+GITHUB_BLACKLIST_URL = "https://raw.githubusercontent.com/Sahitya000/telegram-bot/main/blacklist.txt"
+
 if not all([TOKEN, CHANNEL_ID, GITHUB_TOKEN]):
     raise ValueError("❌ ERROR: Please set BOT_TOKEN, CHANNEL_ID, and GITHUB_TOKEN in Railway!")
 
@@ -43,6 +46,19 @@ def get_messages():
 # 🔹 Get Short Links from GitHub
 
 
+# 🔹 Load Blacklist from GitHub
+def get_blacklist():
+    try:
+        response = requests.get(GITHUB_BLACKLIST_URL, timeout=5)
+        response.raise_for_status()
+        return set(response.text.splitlines())
+    except requests.RequestException:
+        return set()
+
+# 🔹 Check if User is Blacklisted
+def is_blacklisted(user_id):
+    blacklist = get_blacklist()
+    return str(user_id) in blacklist
 
 
 # 🔹 Get Short Links from GitHub
