@@ -142,7 +142,7 @@ def generate_short_code():
 # 🔹 GitHub se Short Links Load Karna
 def get_short_links():
     try:
-        response = requests.get("https://raw.githubusercontent.com/YOUR_GITHUB_USERNAME/YOUR_REPO/main/short_links.json")
+        response = requests.get("https://api.github.com/repos/Sahitya000/telegram-bot/contents/short_links.json")
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
