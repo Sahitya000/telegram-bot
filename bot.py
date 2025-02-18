@@ -8,7 +8,6 @@ import base64
 import random
 import string
 
-
 # 🔹 Environment Variables
 TOKEN = os.getenv("BOT_TOKEN")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
@@ -38,44 +37,6 @@ def get_messages():
             "update": "🔔 New APK Update Available: {app_name}\n📥 Download: {apk_link}"
         }
 
-# 
-
-# 🔹 Get Short Links from GitHub
-
-
-
-
-# 🔹 Get Short Links from GitHub
-def get_short_links():
-    try:
-        response = requests.get(GITHUB_SHORTLINKS_API, timeout=5)
-        response.raise_for_status()
-        content_data = response.json()
-        file_content = base64.b64decode(content_data["content"]).decode()
-        return json.loads(file_content)
-    except requests.RequestException:
-        return {}
-
-# 🔹 Update Short Links on GitHub
-def update_short_links(new_data):
-    headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
-
-    response = requests.get(GITHUB_SHORTLINKS_API, headers=headers)
-    if response.status_code == 200:
-        content_data = response.json()
-        sha = content_data["sha"]
-
-        update_data = {
-            "message": "Updated Short Links",
-            "content": base64.b64encode(json.dumps(new_data, indent=4).encode()).decode(),
-            "sha": sha
-        }
-
-        update_response = requests.put(GITHUB_SHORTLINKS_API, headers=headers, json=update_data)
-        return update_response.status_code == 200
-    return False
-
-# 🔹 Get APK Links from GitHub
 # 🔹 Get Short Links from GitHub
 def get_short_links():
     try:
@@ -176,18 +137,7 @@ def handle_short_link(message):
     else:
         bot.send_message(message.chat.id, "⚠️ Invalid or expired short link.")
 
-
-# 🔹 Start Bot
-
-
-
-# 🔹 Start Bot
-
-# 🔹 Bot Start
-
-
-        #sahitya_app_link
-        
+# 🔹 Handle APK List Command
 @bot.message_handler(commands=["applist"])
 def handle_applist(message):
     user_id = message.chat.id
@@ -208,10 +158,6 @@ def handle_applist(message):
         text += f"🎯 **{app_name}**\n🔗 [Click here to download]({apk_link})\n\n"
 
     bot.send_message(user_id, text, parse_mode="Markdown", disable_web_page_preview=True)
-
-
-
-    
 
 # 🔹 Direct APK Name Input (Case-insensitive Matching)
 @bot.message_handler(func=lambda message: True)
@@ -237,7 +183,6 @@ def handle_apk_request(message):
             bot.send_message(user_id, messages["subscribe"])
     else:
         bot.send_message(user_id, "⚠️ Error ⚠️\nMay be you entered wrong name of APK. Try again later 😞\nSend this message to @sks_000")
-
 
 # 🔹 Handle APK Uploads
 @bot.message_handler(content_types=["document"])
@@ -276,7 +221,6 @@ def check_for_updates():
 update_thread = threading.Thread(target=check_for_updates, daemon=True)
 update_thread.start()
 
-
 # 🔹 Ensure Links Never Expire
 if __name__ == "__main__":
     while True:
@@ -285,6 +229,3 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"Bot crashed: {e}")
             time.sleep(5)
-            
-
-
