@@ -43,7 +43,17 @@ def get_messages():
             "update": "🔔 New APK Update Available: {app_name}\n📥 Download: {apk_link}"
         }
 
-
+# 🔹 Get Short Links from GitHub
+# 🔹 Get Short Links from GitHub
+def get_short_links():
+    try:
+        response = requests.get(GITHUB_SHORTLINKS_API, timeout=5)
+        response.raise_for_status()
+        content_data = response.json()
+        file_content = base64.b64decode(content_data["content"]).decode()
+        return json.loads(file_content)
+    except requests.RequestException:
+        return {}
 
 # 🔹 Update Short Links on GitHub
 def update_short_links(new_data):
@@ -133,9 +143,6 @@ def handle_short_link(message):
             bot.send_message(message.chat.id, "❌ You must join the channel first to get the APK link.")
     else:
         bot.send_message(message.chat.id, "⚠️ Invalid or expired short link.")
-
-# Start the bot
-
 
 
 # 🔹 Handle APK List Command
