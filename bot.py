@@ -189,7 +189,7 @@ def handle_direct_link(message):
         bot.send_message(message.chat.id, "❌ You are not allowed to send links.")
 
 # 🔹 Handle Short Links for Users
-@bot.message_handler(func=lambda message: message.text.startswith("/start link_"))
+@bot.message_handler(func=lambda message: message.text.startswith("/get link_"))
 def handle_short_link(message):
     short_code = message.text.split("_")[-1]
     apk_links = get_short_links()  # 🔄 GitHub se latest data fetch karo
