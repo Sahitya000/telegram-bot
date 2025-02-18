@@ -76,6 +76,37 @@ def update_short_links(new_data):
     return False
 
 # 🔹 Get APK Links from GitHub
+# 🔹 Get Short Links from GitHub
+def get_short_links():
+    try:
+        response = requests.get(GITHUB_SHORTLINKS_API, timeout=5)
+        response.raise_for_status()
+        content_data = response.json()
+        file_content = base64.b64decode(content_data["content"]).decode()
+        return json.loads(file_content)
+    except requests.RequestException:
+        return {}
+
+# 🔹 Update Short Links on GitHub
+def update_short_links(new_data):
+    headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
+
+    response = requests.get(GITHUB_SHORTLINKS_API, headers=headers)
+    if response.status_code == 200:
+        content_data = response.json()
+        sha = content_data["sha"]
+
+        update_data = {
+            "message": "Updated Short Links",
+            "content": base64.b64encode(json.dumps(new_data, indent=4).encode()).decode(),
+            "sha": sha
+        }
+
+        update_response = requests.put(GITHUB_SHORTLINKS_API, headers=headers, json=update_data)
+        return update_response.status_code in [200, 201]
+    return False
+
+# 🔹 Get APK Links from GitHub
 def get_apk_links():
     try:
         response = requests.get(GITHUB_APKS_URL, timeout=5)
@@ -141,9 +172,10 @@ def handle_short_link(message):
         if is_subscribed(message.chat.id):
             bot.send_message(message.chat.id, f"✅ Here is your APK link:\n🔹 Name: {apk_data['name']}\n🔹 Link: {apk_data['link']}")
         else:
-            bot.send_message(message.chat.id, "❌ Sorry You have not subscribed SkMods chanel/nSubscribers channel and come back for your link. \nJoin here: https://t.me/skmods_000")
+            bot.send_message(message.chat.id, "❌ You must join the channel first to get the APK link.")
     else:
         bot.send_message(message.chat.id, "⚠️ Invalid or expired short link.")
+
 
 # 🔹 Start Bot
 
@@ -173,7 +205,7 @@ def handle_applist(message):
     text = "📱 **Available Apps:**\n\n"
 
     for app_name, apk_link in apk_links.items():
-        text += f"🎯 {app_name}🌟\n🔗 [Click here to download]({apk_link})\n\n"
+        text += f"🎯 **{app_name}**\n🔗 [Click here to download]({apk_link})\n\n"
 
     bot.send_message(user_id, text, parse_mode="Markdown", disable_web_page_preview=True)
 
@@ -199,7 +231,7 @@ def handle_apk_request(message):
         markup.add(telebot.types.InlineKeyboardButton("📥 Download APK", url=apk_link))
 
         if is_subscribed(user_id):
-            bot.send_message(user_id, f"📥Download {matching_apk}📥", reply_markup=markup)
+            bot.send_message(user_id, f"📥 **Download {matching_apk}:**", reply_markup=markup)
         else:
             messages = get_messages()
             bot.send_message(user_id, messages["subscribe"])
@@ -244,5 +276,15 @@ def check_for_updates():
 update_thread = threading.Thread(target=check_for_updates, daemon=True)
 update_thread.start()
 
-print("🚀 Bot is running...")
-bot.polling()
+
+# 🔹 Ensure Links Never Expire
+if __name__ == "__main__":
+    while True:
+        try:
+            bot.polling(none_stop=True)
+        except Exception as e:
+            print(f"Bot crashed: {e}")
+            time.sleep(5)
+            
+
+
