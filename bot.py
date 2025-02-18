@@ -204,23 +204,6 @@ def handle_apk_upload(message):
     else:
         bot.send_message(CHANNEL_ID, "⚠️ Error updating APK list on GitHub.")
 
-# 🔹 Background Thread: Auto-check for updates
-def check_for_updates():
-    last_apks = get_apk_links()
-    while True:
-        apk_links = get_apk_links()
-        messages = get_messages()
-
-        for app_name, apk_link in apk_links.items():
-            if last_apks.get(app_name) != apk_link:
-                bot.send_message(CHANNEL_ID, messages["update"].format(app_name=app_name, apk_link=apk_link))
-                last_apks[app_name] = apk_link
-
-        time.sleep(3600)
-
-update_thread = threading.Thread(target=check_for_updates, daemon=True)
-update_thread.start()
-
 # 🔹 Ensure Links Never Expire
 if __name__ == "__main__":
     while True:
