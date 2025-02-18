@@ -7,8 +7,6 @@ import base64
 import random
 import string
 
-
-
 # 🔹 Environment Variables
 TOKEN = os.getenv("BOT_TOKEN")
 response = requests.get(f"https://api.telegram.org/bot{TOKEN}/deleteWebhook")
