@@ -45,6 +45,7 @@ def get_messages():
 
 # 🔹 Get Short Links from GitHub
 # 🔹 Get Short Links from GitHub
+# 🔹 Get Short Links from GitHub
 def get_short_links():
     try:
         response = requests.get(GITHUB_SHORTLINKS_API, timeout=5)
@@ -122,7 +123,7 @@ def handle_direct_link(message):
         short_code = generate_short_code()
         short_links[short_code] = {"name": apk_name, "link": original_link}
         if update_short_links(short_links):  # 🔄 Save Links to GitHub
-            short_link = f"https://t.me/{bot.get_me().username}?shortlink_{short_code}"
+            short_link = f"https://t.me/{bot.get_me().username}?getorignal_{short_code}"
             bot.send_message(message.chat.id, f"✅ Short link created: {short_link}\n🔹 Name: {apk_name}")
         else:
             bot.send_message(message.chat.id, "❌ Failed to update short links on GitHub.")
@@ -130,7 +131,7 @@ def handle_direct_link(message):
         bot.send_message(message.chat.id, "❌ You are not allowed to send links.")
 
 # 🔹 Handle Short Links for Users
-@bot.message_handler(func=lambda message: message.text.startswith("/shortlink_"))
+@bot.message_handler(func=lambda message: message.text.startswith("/getorignal_"))
 def handle_short_link(message):
     short_code = message.text.split("_")[-1]
     apk_links = get_short_links()  # 🔄 GitHub se latest data fetch karo
