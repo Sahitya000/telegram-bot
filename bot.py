@@ -7,12 +7,14 @@ import base64
 import random
 import string
 
+import telebot.apihelper
 
 
 # 🔹 Environment Variables
+CHANNEL_ID = os.getenv("CHANNEL_ID")
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+
 TOKEN = os.getenv("BOT_TOKEN")
-bot.remove_webhook()
-time.sleep(1)  # Give it a second before polling starts
 
 # 🔹 GitHub URLs
 GITHUB_MESSAGES_URL = "https://raw.githubusercontent.com/Sahitya000/telegram-bot/main/messages.json"
@@ -23,7 +25,10 @@ GITHUB_SHORTLINKS_API = "https://api.github.com/repos/Sahitya000/telegram-bot/co
 if not all([TOKEN, CHANNEL_ID, GITHUB_TOKEN]):
     raise ValueError("❌ ERROR: Please set BOT_TOKEN, CHANNEL_ID, and GITHUB_TOKEN in Railway!")
 
+# 🔹 Initialize Bot
 bot = telebot.TeleBot(TOKEN)
+bot.remove_webhook()  # Ensure webhook is removed
+time.sleep(1)
 
 # 🔹 Load Messages from GitHub
 def get_messages():
