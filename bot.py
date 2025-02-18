@@ -22,7 +22,7 @@ GITHUB_SHORTLINKS_API = "https://api.github.com/repos/Sahitya000/telegram-bot/co
 if not all([TOKEN, CHANNEL_ID, GITHUB_TOKEN]):
     raise ValueError("❌ ERROR: Please set BOT_TOKEN, CHANNEL_ID, and GITHUB_TOKEN in Railway!")
 
-bot = telebot.TeleBot(TOKEN,skip_pending=True)
+bot = telebot.TeleBot(TOKEN)
 
 # 🔹 Load Messages from GitHub
 def get_messages():
