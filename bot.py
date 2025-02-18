@@ -6,17 +6,14 @@ import time
 import base64
 import random
 import string
-import requests
-
 
 
 
 # 🔹 Environment Variables
 TOKEN = os.getenv("BOT_TOKEN")
-CHANNEL_ID = os.getenv("CHANNEL_ID")
 response = requests.get(f"https://api.telegram.org/bot{TOKEN}/deleteWebhook")
 print(response.status_code, response.text)
-
+CHANNEL_ID = os.getenv("CHANNEL_ID")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
 # 🔹 GitHub URLs
