@@ -62,7 +62,7 @@ def update_users(new_users):
 users = get_users() or []  # Ensure users is always a list
 
 # 🔹 /start Command
-@bot.message_handler(commands=["start"])
+@bot.message_handler(commands=["join"])
 def start(message):
     user_id = message.chat.id
     if user_id not in users:
