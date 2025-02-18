@@ -188,20 +188,28 @@ def handle_direct_link(message):
     else:
         bot.send_message(message.chat.id, "❌ You are not allowed to send links.")
 
-# 🔹 Handle Short Links for Users
-@bot.message_handler(func=lambda message: message.text.startswith("/get link_"))
-def handle_short_link(message):
-    short_code = message.text.split("_")[-1]
-    apk_links = get_short_links()  # 🔄 GitHub se latest data fetch karo
+# 🔹 Fix: Use `/start` for Short Links Handling
+@bot.message_handler(commands=['start'])
+def handle_start(message):
+    text = message.text.strip()
+    
+    # Check if it's a short link request
+    if text.startswith("/start get_link_"):
+        short_code = text.split("_")[-1]
+        apk_links = get_short_links()  # 🔄 GitHub se latest data fetch karo
 
-    if short_code in apk_links:
-        apk_data = apk_links[short_code]
-        if is_subscribed(message.chat.id):
-            bot.send_message(message.chat.id, f"✅ Here is your APK link:\n🔹 Name: {apk_data['name']}\n🔹 Link: {apk_data['link']}")
+        if short_code in apk_links:
+            apk_data = apk_links[short_code]
+            if is_subscribed(message.chat.id):
+                bot.send_message(message.chat.id, f"✅ Here is your APK link:\n🔹 Name: {apk_data['name']}\n🔹 Link: {apk_data['link']}")
+            else:
+                bot.send_message(message.chat.id, "❌ You must join the channel first to get the APK link.")
         else:
-            bot.send_message(message.chat.id, "❌ You must join the channel first to get the APK link.")
+            bot.send_message(message.chat.id, "⚠️ Invalid or expired short link.")
+    
     else:
-        bot.send_message(message.chat.id, "⚠️ Invalid or expired short link.")
+        bot.send_message(message.chat.id, "👋 Welcome! How can I assist you?")
+
 
 # 🔹 Handle APK List Command
 @bot.message_handler(commands=["applist"])
