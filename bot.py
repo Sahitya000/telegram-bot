@@ -181,7 +181,7 @@ def handle_direct_link(message):
         short_code = generate_short_code()
         short_links[short_code] = {"name": apk_name, "link": original_link}
         if update_short_links(short_links):  # 🔄 Save Links to GitHub
-            short_link = f"https://t.me/{bot.get_me().username}?start=link_{short_code}"
+            short_link = f"https://t.me/{bot.get_me().username}?text=/get link_{short_code}"
             bot.send_message(message.chat.id, f"✅ Short link created: {short_link}\n🔹 Name: {apk_name}")
         else:
             bot.send_message(message.chat.id, "❌ Failed to update short links on GitHub.")
