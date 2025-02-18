@@ -27,9 +27,9 @@ if not all([TOKEN, CHANNEL_ID, GITHUB_TOKEN]):
 
 # 🔹 Initialize Bot
 bot = telebot.TeleBot(TOKEN)
-bot.remove_webhook()  # Ensure webhook is removed
-time.sleep(1)
-
+#🛠️ Ensure webhook is removed before polling starts
+bot.remove_webhook()
+time.sleep(1)  # Wait for proper removal
 # 🔹 Load Messages from GitHub
 def get_messages():
     try:
@@ -212,6 +212,6 @@ def handle_apk_upload(message):
 
 # 🔹 Ensure Links Never Expire
 if __name__ == "__main__":
-    bot.remove_webhook()  # Ensure webhook is removed
-    time.sleep(1)  # Wait a moment before polling
-    bot.infinity_polling(timeout=10, long_polling_timeout=5)  # More stable polling
+    bot.remove_webhook()
+    time.sleep(1)
+    bot.infinity_polling(timeout=30, long_polling_timeout=25)
