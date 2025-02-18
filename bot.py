@@ -7,12 +7,12 @@ import base64
 import random
 import string
 
+
+
 # 🔹 Environment Variables
 TOKEN = os.getenv("BOT_TOKEN")
-response = requests.get(f"https://api.telegram.org/bot{TOKEN}/deleteWebhook")
-print(response.status_code, response.text)
-CHANNEL_ID = os.getenv("CHANNEL_ID")
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+bot.remove_webhook()
+time.sleep(1)  # Give it a second before polling starts
 
 # 🔹 GitHub URLs
 GITHUB_MESSAGES_URL = "https://raw.githubusercontent.com/Sahitya000/telegram-bot/main/messages.json"
@@ -207,9 +207,6 @@ def handle_apk_upload(message):
 
 # 🔹 Ensure Links Never Expire
 if __name__ == "__main__":
-    while True:
-        try:
-            bot.polling(none_stop=True)
-        except Exception as e:
-            print(f"Bot crashed: {e}")
-            time.sleep(5)
+    bot.remove_webhook()  # Ensure webhook is removed
+    time.sleep(1)  # Wait a moment before polling
+    bot.infinity_polling(timeout=10, long_polling_timeout=5)  # More stable polling
