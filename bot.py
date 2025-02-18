@@ -2,7 +2,6 @@ import telebot
 import os
 import requests
 import json
-import threading
 import time
 import base64
 import random
