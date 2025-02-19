@@ -87,6 +87,8 @@ def forward_channel_message(message):
 
 # 🔹 Load Messages from GitHub
 
+import requests
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 def get_messages():
     try:
@@ -96,7 +98,7 @@ def get_messages():
     except requests.RequestException:
         return {
             "start": "👋 Welcome! Click below to download your app:",
-            "subscribe": "❌ Sorry You have not subscribed SkMods channel And Instagram Account.\nSubscribe to the channel and Follow on Instagram.\nAfter done, come back for your link.",
+            "subscribe": "❌ Sorry You have not subscribed SkMods channel And Instagram Account.\n\nSubscribe to the channel and Follow on Instagram.\n\nAfter done, come back for your link.",
             "update": "🔔 New APK Update Available: {app_name}\n📥 Download: {apk_link}"
         }
 
@@ -111,7 +113,15 @@ def send_message(update, context):
     messages = get_messages()
     text = messages.get("subscribe")
     buttons = get_buttons()
-    context.bot.send_message(chat_id=update.effective_chat.id, text=text, reply_markup=buttons)
+    
+    # Ensure message is sent with buttons
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=text,
+        reply_markup=buttons,
+        parse_mode="Markdown"
+    )
+
 
 # 🔹 Get Short Links from GitHub
 def get_short_links():
