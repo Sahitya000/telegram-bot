@@ -7,7 +7,7 @@ import base64
 import random
 import string
 import telebot.apihelper
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+
 # 🔹 Environment Variables
 CHANNEL_ID = os.getenv("CHANNEL_ID")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
@@ -89,6 +89,9 @@ def forward_channel_message(message):
 
 import requests
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Updater, CommandHandler, CallbackContext
+
+# 🔹 GitHub Messages
 
 def get_messages():
     try:
@@ -97,9 +100,8 @@ def get_messages():
         return response.json()
     except requests.RequestException:
         return {
-            "start": "👋 Welcome! Click below to download your app:",
-            "subscribe": "❌ Sorry You have not subscribed SkMods channel And Instagram Account.\n\nSubscribe to the channel and Follow on Instagram.\n\nAfter done, come back for your link.",
-            "update": "🔔 New APK Update Available: {app_name}\n📥 Download: {apk_link}"
+            "subscribe": "❌ Sorry! You have not subscribed SkMods channel And Instagram Account.\n\n"
+                         "📢 Join Telegram & 📸 Follow Instagram, then come back for your link."
         }
 
 def get_buttons():
@@ -109,18 +111,14 @@ def get_buttons():
     ]
     return InlineKeyboardMarkup(keyboard)
 
-def send_message(update, context):
+def send_message(update, context: CallbackContext):
     messages = get_messages()
     text = messages.get("subscribe")
     buttons = get_buttons()
-    
-    # Ensure message is sent with buttons
-    context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text=text,
-        reply_markup=buttons,
-        parse_mode="Markdown"
-    )
+
+    update.message.reply_text(text, reply_markup=buttons, parse_mode="Markdown")
+
+
 
 
 # 🔹 Get Short Links from GitHub
