@@ -94,7 +94,7 @@ def get_messages():
     except requests.RequestException:
         return {
             "start": "👋 Welcome! Click below to download your app:",
-            "subscribe": "❌ You must subscribe to get the APK. Join here: https://t.me/skmods_000",
+            "subscribe": "❌ Sorry You have not subscribed SkMods chanel And Instagram Account \nSubscribe channel and Follow on Instagram After done come back for your link. \nJoin here: https://t.me/skmods_000"\nFollow: instagram://user?username=sahitya_000",
             "update": "🔔 New APK Update Available: {app_name}\n📥 Download: {apk_link}"
         }
 
