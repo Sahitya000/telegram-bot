@@ -17,6 +17,8 @@ ADMIN_ID = os.getenv("ADMIN_ID")  # Sirf aap (Admin) commands use kar sakenge
 # 🔹 GitHub URLs
 GITHUB_MESSAGES_URL = "https://raw.githubusercontent.com/Sahitya000/telegram-bot/main/messages.json"
 GITHUB_BLACKLIST_API = "https://api.github.com/repos/Sahitya000/telegram-bot/contents/blacklist.json"
+
+GITHUB_BLACKLIST_API = "https://api.github.com/repos/Sahitya000/telegram-bot/contents/blacklist.json"
 GITHUB_APKS_URL = "https://raw.githubusercontent.com/Sahitya000/telegram-bot/main/apk_links.json"
 GITHUB_REPO_API = "https://api.github.com/repos/Sahitya000/telegram-bot/contents/apk_links.json"
 GITHUB_SHORTLINKS_API = "https://api.github.com/repos/Sahitya000/telegram-bot/contents/short_links.json"
@@ -34,6 +36,9 @@ time.sleep(1)  # Wait for proper removal
 
 
 
+
+### -------- USERS SYSTEM -------- ###
+
 # 🔹 Load Users from GitHub
 def get_users():
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
@@ -42,52 +47,136 @@ def get_users():
     if response.status_code == 200:
         content_data = response.json()
         file_content = base64.b64decode(content_data["content"]).decode()
-        return json.loads(file_content)
-    return []  # 🔹 Always return a list
+        return json.loads(file_content), content_data["sha"]
+    
+    return [], None  # Always return list & SHA (None if file doesn't exist)
 
 # 🔹 Update Users on GitHub
-def update_users(new_users):
+def update_users(new_users, sha):
     headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
-    response = requests.get(GITHUB_USERS_API, headers=headers)
+    update_data = {
+        "message": "Updated Users List",
+        "content": base64.b64encode(json.dumps(new_users, indent=4).encode()).decode(),
+        "sha": sha
+    }
+    response = requests.put(GITHUB_USERS_API, headers=headers, json=update_data)
+    return response.status_code in [200, 201]
 
+# 🔹 Load Users
+users, users_sha = get_users()
+
+### -------- BLACKLIST SYSTEM -------- ###
+
+# 🔹 Load Blacklist from GitHub
+def load_blacklist():
+    headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
+    response = requests.get(GITHUB_BLACKLIST_API, headers=headers)
+    
     if response.status_code == 200:
         content_data = response.json()
-        sha = content_data["sha"]
+        file_content = base64.b64decode(content_data["content"]).decode()
+        return json.loads(file_content), content_data["sha"]
+    
+    return [], None  # Always return list & SHA (None if file doesn't exist)
 
-        update_data = {
-            "message": "Updated Users List",
-            "content": base64.b64encode(json.dumps(new_users, indent=4).encode()).decode(),
-            "sha": sha
-        }
+# 🔹 Update Blacklist on GitHub
+def update_blacklist(new_blacklist, sha):
+    headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
+    update_data = {
+        "message": "Updated Blacklist",
+        "content": base64.b64encode(json.dumps(new_blacklist, indent=4).encode()).decode(),
+        "sha": sha
+    }
+    response = requests.put(GITHUB_BLACKLIST_API, headers=headers, json=update_data)
+    return response.status_code in [200, 201]
 
-        update_response = requests.put(GITHUB_USERS_API, headers=headers, json=update_data)
-        return update_response.status_code in [200, 201]
-    return False
+# 🔹 Load Blacklist
+blacklist, blacklist_sha = load_blacklist()
 
-# 🔹 Load Persistent Users List
-users = get_users() or []  # Ensure users is always a list
+# 🔹 Check if User is Blacklisted
+def is_blacklisted(user_id):
+    return any(user["user_id"] == user_id for user in blacklist)
 
-# 🔹 /start Command
+### -------- BOT COMMANDS -------- ###
+
+# 🔹 /join Command - Add Users
 @bot.message_handler(commands=["join"])
-def start(message):
+def join(message):
     user_id = message.chat.id
+
+    if is_blacklisted(user_id):
+        bot.send_message(user_id, "🚫 Aap blacklist me hain, bot ka use nahi kar sakte!")
+        return
+
     if user_id not in users:
         users.append(user_id)
-        if update_users(users):
+        if update_users(users, users_sha):
             bot.send_message(user_id, "✅ You have been added to the bot. Now you will receive channel updates!")
         else:
             bot.send_message(user_id, "❌ Failed to save your data. Please try again later.")
     else:
         bot.send_message(user_id, "📢 You are already in the bot system!")
 
+# 🔹 /blacklist Command (Admin Only)
+@bot.message_handler(commands=["blacklist"])
+def blacklist_user(message):
+    if str(message.chat.id) != ADMIN_ID:
+        bot.send_message(message.chat.id, "🚫 Aap is command ka use nahi kar sakte!")
+        return
+
+    try:
+        user_id = int(message.text.split()[1])
+        if is_blacklisted(user_id):
+            bot.send_message(message.chat.id, "⚠ User already blacklisted!")
+            return
+
+        blacklist.append({"user_id": user_id, "username": message.chat.username or "Unknown"})
+
+        if update_blacklist(blacklist, blacklist_sha):
+            bot.send_message(message.chat.id, f"✅ User {user_id} blacklisted!")
+        else:
+            bot.send_message(message.chat.id, "❌ Blacklist update failed!")
+
+    except (IndexError, ValueError):
+        bot.send_message(message.chat.id, "⚠ Use: /blacklist <user_id>")
+
+# 🔹 /whitelist Command (Admin Only)
+@bot.message_handler(commands=["whitelist"])
+def whitelist_user(message):
+    if str(message.chat.id) != ADMIN_ID:
+        bot.send_message(message.chat.id, "🚫 Aap is command ka use nahi kar sakte!")
+        return
+
+    try:
+        user_id = int(message.text.split()[1])
+        global blacklist
+        blacklist = [user for user in blacklist if user["user_id"] != user_id]
+
+        if update_blacklist(blacklist, blacklist_sha):
+            bot.send_message(message.chat.id, f"✅ User {user_id} removed from blacklist!")
+        else:
+            bot.send_message(message.chat.id, "❌ Whitelist update failed!")
+
+    except (IndexError, ValueError):
+        bot.send_message(message.chat.id, "⚠ Use: /whitelist <user_id>")
+
+# 🔹 Block Blacklisted Users from Using Bot
+@bot.message_handler(func=lambda message: is_blacklisted(message.chat.id))
+def block_blacklisted_users(message):
+    bot.send_message(message.chat.id, "🚫 Aap blacklist me hain, bot ka use nahi kar sakte!")
+
 # 🔹 Forward Channel Messages to Users
 @bot.channel_post_handler(func=lambda message: True)
 def forward_channel_message(message):
     for user_id in users:
-        try:
-            bot.forward_message(chat_id=user_id, from_chat_id=CHANNEL_ID, message_id=message.message_id)
-        except Exception as e:
-            print(f"❌ Error sending to {user_id}: {e}")
+        if not is_blacklisted(user_id):
+            try:
+                bot.forward_message(chat_id=user_id, from_chat_id=CHANNEL_ID, message_id=message.message_id)
+            except Exception as e:
+                print(f"❌ Error sending to {user_id}: {e}")
+
+# 🔹 Start Bot
+
 
 # 🔹 Load Messages from GitHub
 def get_messages():
