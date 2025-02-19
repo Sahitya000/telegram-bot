@@ -33,98 +33,6 @@ time.sleep(1)  # Wait for proper removal
 
 
 
-# 🔹 GitHub Blacklist API
-
-
-
-# 🔹 Load Blacklist from GitHub
-def load_blacklist():
-    headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
-    response = requests.get(GITHUB_BLACKLIST_API, headers=headers)
-    
-    if response.status_code == 200:
-        content_data = response.json()
-        file_content = base64.b64decode(content_data["content"]).decode()
-        return json.loads(file_content), content_data["sha"]
-    
-    return [], None
-
-# 🔹 Update Blacklist on GitHub
-def update_blacklist(new_blacklist, sha):
-    headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
-    update_data = {
-        "message": "Updated Blacklist",
-        "content": base64.b64encode(json.dumps(new_blacklist, indent=4).encode()).decode(),
-        "sha": sha
-    }
-    response = requests.put(GITHUB_BLACKLIST_API, headers=headers, json=update_data)
-    return response.status_code in [200, 201]
-
-# 🔹 Load Blacklist Data
-blacklist, blacklist_sha = load_blacklist()
-
-# 🔹 /blacklist Command (Only for Admin)
-@bot.message_handler(commands=["blacklist"])
-def blacklist_user(message):
-    if str(message.chat.id) != ADMIN_ID:  # ✅ Sirf Admin Use Kar Sakta Hai
-        bot.send_message(message.chat.id, "🚫 Aap is command ka use nahi kar sakte!")
-        return
-
-    try:
-        user_id = int(message.text.split()[1])
-        if any(user["user_id"] == user_id for user in blacklist):
-            bot.send_message(message.chat.id, "⚠ User already blacklisted!")
-            return
-
-        username = message.chat.username or "Unknown"
-        blacklist.append({"user_id": user_id, "username": username})
-
-        if update_blacklist(blacklist, blacklist_sha):
-            bot.send_message(message.chat.id, f"✅ User {user_id} blacklisted!")
-        else:
-            bot.send_message(message.chat.id, "❌ Blacklist update failed!")
-
-    except (IndexError, ValueError):
-        bot.send_message(message.chat.id, "⚠ Use: /blacklist <user_id>")
-
-# 🔹 /whitelist Command (Only for Admin)
-@bot.message_handler(commands=["whitelist"])
-def whitelist_user(message):
-    if str(message.chat.id) != ADMIN_ID:  # ✅ Sirf Admin Use Kar Sakta Hai
-        bot.send_message(message.chat.id, "🚫 Aap is command ka use nahi kar sakte!")
-        return
-
-    try:
-        user_id = int(message.text.split()[1])
-        global blacklist
-        blacklist = [user for user in blacklist if user["user_id"] != user_id]
-
-        if update_blacklist(blacklist, blacklist_sha):
-            bot.send_message(message.chat.id, f"✅ User {user_id} removed from blacklist!")
-        else:
-            bot.send_message(message.chat.id, "❌ Whitelist update failed!")
-
-    except (IndexError, ValueError):
-        bot.send_message(message.chat.id, "⚠ Use: /whitelist <user_id>")
-
-# 🔹 Block Blacklisted Users from Receiving Messages
-def is_blacklisted(user_id):
-    return any(user["user_id"] == user_id for user in blacklist)
-
-@bot.message_handler(func=lambda message: is_blacklisted(message.chat.id))
-def block_blacklisted_users(message):
-    bot.send_message(message.chat.id, "🚫 Aap blacklist me hain, bot ka use nahi kar sakte!")
-    
-
-
-
-
-
-
-
-
-
-
 
 # 🔹 Load Users from GitHub
 def get_users():
@@ -360,6 +268,93 @@ def handle_apk_upload(message):
         bot.send_message(CHANNEL_ID, f"✅ {file_name} added to APK database!")
     else:
         bot.send_message(CHANNEL_ID, "⚠️ Error updating APK list on GitHub.")
+
+
+
+
+# 🔹 GitHub Blacklist API
+
+
+
+# 🔹 Load Blacklist from GitHub
+def load_blacklist():
+    headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
+    response = requests.get(GITHUB_BLACKLIST_API, headers=headers)
+    
+    if response.status_code == 200:
+        content_data = response.json()
+        file_content = base64.b64decode(content_data["content"]).decode()
+        return json.loads(file_content), content_data["sha"]
+    
+    return [], None
+
+# 🔹 Update Blacklist on GitHub
+def update_blacklist(new_blacklist, sha):
+    headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
+    update_data = {
+        "message": "Updated Blacklist",
+        "content": base64.b64encode(json.dumps(new_blacklist, indent=4).encode()).decode(),
+        "sha": sha
+    }
+    response = requests.put(GITHUB_BLACKLIST_API, headers=headers, json=update_data)
+    return response.status_code in [200, 201]
+
+# 🔹 Load Blacklist Data
+blacklist, blacklist_sha = load_blacklist()
+
+# 🔹 /blacklist Command (Only for Admin)
+@bot.message_handler(commands=["blacklist"])
+def blacklist_user(message):
+    if str(message.chat.id) != ADMIN_ID:  # ✅ Sirf Admin Use Kar Sakta Hai
+        bot.send_message(message.chat.id, "🚫 Aap is command ka use nahi kar sakte!")
+        return
+
+    try:
+        user_id = int(message.text.split()[1])
+        if any(user["user_id"] == user_id for user in blacklist):
+            bot.send_message(message.chat.id, "⚠ User already blacklisted!")
+            return
+
+        username = message.chat.username or "Unknown"
+        blacklist.append({"user_id": user_id, "username": username})
+
+        if update_blacklist(blacklist, blacklist_sha):
+            bot.send_message(message.chat.id, f"✅ User {user_id} blacklisted!")
+        else:
+            bot.send_message(message.chat.id, "❌ Blacklist update failed!")
+
+    except (IndexError, ValueError):
+        bot.send_message(message.chat.id, "⚠ Use: /blacklist <user_id>")
+
+# 🔹 /whitelist Command (Only for Admin)
+@bot.message_handler(commands=["whitelist"])
+def whitelist_user(message):
+    if str(message.chat.id) != ADMIN_ID:  # ✅ Sirf Admin Use Kar Sakta Hai
+        bot.send_message(message.chat.id, "🚫 Aap is command ka use nahi kar sakte!")
+        return
+
+    try:
+        user_id = int(message.text.split()[1])
+        global blacklist
+        blacklist = [user for user in blacklist if user["user_id"] != user_id]
+
+        if update_blacklist(blacklist, blacklist_sha):
+            bot.send_message(message.chat.id, f"✅ User {user_id} removed from blacklist!")
+        else:
+            bot.send_message(message.chat.id, "❌ Whitelist update failed!")
+
+    except (IndexError, ValueError):
+        bot.send_message(message.chat.id, "⚠ Use: /whitelist <user_id>")
+
+# 🔹 Block Blacklisted Users from Receiving Messages
+def is_blacklisted(user_id):
+    return any(user["user_id"] == user_id for user in blacklist)
+
+@bot.message_handler(func=lambda message: is_blacklisted(message.chat.id))
+def block_blacklisted_users(message):
+    bot.send_message(message.chat.id, "🚫 Aap blacklist me hain, bot ka use nahi kar sakte!")
+    
+
 
 # 🔹 Ensure Links Never Expire
 if __name__ == "__main__":
