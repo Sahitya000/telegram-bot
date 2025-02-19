@@ -6,13 +6,14 @@ import time
 import base64
 import random
 import string
+
 import telebot.apihelper
-from extra import send_subscription_message  # Importing function from extra.py
 
 
 # 🔹 Environment Variables
 CHANNEL_ID = os.getenv("CHANNEL_ID")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+
 TOKEN = os.getenv("BOT_TOKEN")
 
 # 🔹 GitHub URLs
@@ -20,87 +21,16 @@ GITHUB_MESSAGES_URL = "https://raw.githubusercontent.com/Sahitya000/telegram-bot
 GITHUB_APKS_URL = "https://raw.githubusercontent.com/Sahitya000/telegram-bot/main/apk_links.json"
 GITHUB_REPO_API = "https://api.github.com/repos/Sahitya000/telegram-bot/contents/apk_links.json"
 GITHUB_SHORTLINKS_API = "https://api.github.com/repos/Sahitya000/telegram-bot/contents/short_links.json"
-GITHUB_USERS_API = "https://api.github.com/repos/Sahitya000/telegram-bot/contents/users.json"
 
 if not all([TOKEN, CHANNEL_ID, GITHUB_TOKEN]):
     raise ValueError("❌ ERROR: Please set BOT_TOKEN, CHANNEL_ID, and GITHUB_TOKEN in Railway!")
 
 # 🔹 Initialize Bot
 bot = telebot.TeleBot(TOKEN)
-bot.remove_webhook()
-time.sleep(1)  # Wait for proper removal
+bot.remove_webhook()  # Ensure webhook is removed
+time.sleep(1)
 
-# 🔹 Load Users from GitHub
-def get_users():
-    headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
-    response = requests.get(GITHUB_USERS_API, headers=headers)
-
-    if response.status_code == 200:
-        content_data = response.json()
-        file_content = base64.b64decode(content_data["content"]).decode()
-        return json.loads(file_content)
-    return []  # 🔹 Always return a list
-
-# 🔹 Update Users on GitHub
-def update_users(new_users):
-    headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
-    response = requests.get(GITHUB_USERS_API, headers=headers)
-
-    if response.status_code == 200:
-        content_data = response.json()
-        sha = content_data["sha"]
-
-        update_data = {
-            "message": "Updated Users List",
-            "content": base64.b64encode(json.dumps(new_users, indent=4).encode()).decode(),
-            "sha": sha
-        }
-
-        update_response = requests.put(GITHUB_USERS_API, headers=headers, json=update_data)
-        return update_response.status_code in [200, 201]
-    return False
-
-# 🔹 Load Persistent Users List
-users = get_users() or []  # Ensure users is always a list
-
-# 🔹 /start Command
-@bot.message_handler(commands=["join"])
-def start(message):
-    user_id = message.chat.id
-    if user_id not in users:
-        users.append(user_id)
-        if update_users(users):
-            bot.send_message(user_id, "✅ You have been added to the bot. Now you will receive channel updates!")
-        else:
-            bot.send_message(user_id, "❌ Failed to save your data. Please try again later.")
-    else:
-        bot.send_message(user_id, "📢 You are already in the bot system!")
-
-# 🔹 Forward Channel Messages to Users
-@bot.channel_post_handler(func=lambda message: True)
-def forward_channel_message(message):
-    for user_id in users:
-        try:
-            bot.forward_message(chat_id=user_id, from_chat_id=CHANNEL_ID, message_id=message.message_id)
-        except Exception as e:
-            print(f"❌ Error sending to {user_id}: {e}")
-
-
-
-
-
-
-@bot.message_handler(commands=['start'])
-def start_message(message):
-    send_subscription_message(bot, message.chat.id)  # Calling function from extra.py
-
-
-
-
-
-
-
-
+# 🔹 Load Messages from GitHub
 def get_messages():
     try:
         response = requests.get(GITHUB_MESSAGES_URL, timeout=5)
@@ -112,9 +42,6 @@ def get_messages():
             "subscribe": "❌ You must subscribe to get the APK. Join here: https://t.me/skmods_000",
             "update": "🔔 New APK Update Available: {app_name}\n📥 Download: {apk_link}"
         }
-
-
-
 
 # 🔹 Get Short Links from GitHub
 def get_short_links():
@@ -212,7 +139,7 @@ def handle_short_link(message):
         if is_subscribed(message.chat.id):
             bot.send_message(message.chat.id, f"✅ Here is your APK link:\n🔹 Name: {apk_data['name']}\n🔹 Link: {apk_data['link']}")
         else:
-            bot.send_message(message.chat.id, "❌ You must join the channel first to get the APK link.")
+            bot.send_message(message.chat.id, "❌ You must join the channel first to get the APK link.\nClick below to join: https://t.me/skmods_000")
     else:
         bot.send_message(message.chat.id, "⚠️ Invalid or expired short link.")
 
@@ -284,10 +211,7 @@ def handle_apk_upload(message):
         bot.send_message(CHANNEL_ID, "⚠️ Error updating APK list on GitHub.")
 
 # 🔹 Ensure Links Never Expire
-
-
-# 🔹 Ensure Links Never Expire
 if __name__ == "__main__":
-    bot.remove_webhook()
-    time.sleep(1)
-    bot.infinity_polling(timeout=30, long_polling_timeout=25)
+    bot.remove_webhook()  # Ensure webhook is removed
+    time.sleep(1)  # Wait a moment before polling
+    bot.infinity_polling(timeout=10, long_polling_timeout=5)  # More stable polling
