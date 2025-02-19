@@ -7,7 +7,7 @@ import base64
 import random
 import string
 import telebot.apihelper
-
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 # 🔹 Environment Variables
 CHANNEL_ID = os.getenv("CHANNEL_ID")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
@@ -86,6 +86,8 @@ def forward_channel_message(message):
 
 
 # 🔹 Load Messages from GitHub
+
+
 def get_messages():
     try:
         response = requests.get(GITHUB_MESSAGES_URL, timeout=5)
@@ -94,9 +96,22 @@ def get_messages():
     except requests.RequestException:
         return {
             "start": "👋 Welcome! Click below to download your app:",
-            "subscribe": "❌ Sorry You have not subscribed SkMods chanel And Instagram Account Subscribe channel and Follow on Instagram \nAfter done come back for your link. Join here: https://instagram.com/sahitya_000 \nFollow: https://t.me/skmods_000",
+            "subscribe": "❌ Sorry You have not subscribed SkMods channel And Instagram Account.\nSubscribe to the channel and Follow on Instagram.\nAfter done, come back for your link.",
             "update": "🔔 New APK Update Available: {app_name}\n📥 Download: {apk_link}"
         }
+
+def get_buttons():
+    keyboard = [
+        [InlineKeyboardButton("📢 Join Telegram", url="https://t.me/skmods_000")],
+        [InlineKeyboardButton("📸 Follow on Instagram", url="https://instagram.com/sahitya_000")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+def send_message(update, context):
+    messages = get_messages()
+    text = messages.get("subscribe")
+    buttons = get_buttons()
+    context.bot.send_message(chat_id=update.effective_chat.id, text=text, reply_markup=buttons)
 
 # 🔹 Get Short Links from GitHub
 def get_short_links():
