@@ -81,11 +81,17 @@ def start(message):
 # 🔹 Forward Channel Messages to Users
 @bot.channel_post_handler(func=lambda message: True)
 def forward_channel_message(message):
-    for user_id in users:
-        try:
-            bot.forward_message(chat_id=user_id, from_chat_id=CHANNEL_ID, message_id=message.message_id)
-        except Exception as e:
-            print(f"❌ Error sending to {user_id}: {e}")
+    allowed_channels = [int(CHANNEL_ID), int(CHANNEL_ID_2)]  # Make sure these are strings/int
+
+    if message.chat.id in allowed_channels:
+        for user_id in users:
+            try:
+                bot.forward_message(chat_id=user_id, from_chat_id=message.chat.id, message_id=message.message_id)
+            except Exception as e:
+                print(f"❌ Error sending to {user_id}: {e}")
+    else:
+        print(f"⛔ Ignored message from channel ID: {message.chat.id}")
+
 
 # 🔹 Load Messages from GitHub
 def get_messages():
