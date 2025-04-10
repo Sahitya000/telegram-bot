@@ -12,6 +12,8 @@ from extra import send_subscription_message  # Importing function from extra.py
 
 # 🔹 Environment Variables
 CHANNEL_ID = os.getenv("CHANNEL_ID")
+CHANNEL_ID_2 = os.getenv("CHANNEL_ID_2")  # Second Channel
+
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 TOKEN = os.getenv("BOT_TOKEN")
 
@@ -94,7 +96,7 @@ def get_messages():
     except requests.RequestException:
         return {
             "start": "👋 Welcome! Click below to download your app:",
-            "subscribe": "❌ You must subscribe to get the APK. Join here: https://t.me/instamaxpro",
+            "subscribe": "❌ You must subscribe to both channels to get the APK. Join here:\n👉 https://t.me/instamaxpro\n👉 https://t.me/your_second_channel",
             "update": "🔔 New APK Update Available: {app_name}\n📥 Download: {apk_link}"
         }
 
@@ -140,10 +142,15 @@ def get_apk_links():
 # 🔹 Check Subscription
 def is_subscribed(user_id):
     try:
-        chat_member = bot.get_chat_member(CHANNEL_ID, user_id)
-        return chat_member.status in ["member", "administrator", "creator"]
+        chat_member1 = bot.get_chat_member(CHANNEL_ID, user_id)
+        chat_member2 = bot.get_chat_member(CHANNEL_ID_2, user_id)
+        return (
+            chat_member1.status in ["member", "administrator", "creator"]
+            and chat_member2.status in ["member", "administrator", "creator"]
+        )
     except telebot.apihelper.ApiTelegramException:
         return False
+
 
 # 🔹 Check if User is Admin
 def is_admin(user_id):
