@@ -96,7 +96,7 @@ def get_messages():
     except requests.RequestException:
         return {
             "start": "👋 Welcome! Click below to download your app:",
-            "subscribe": "❌ You must subscribe to both channels to get the APK. Join here:\n👉 https://t.me/instamaxpro\n👉 https://t.me/your_second_channel",
+            "subscribe": "❌ You must subscribe to both channels to get the APK. Join here:\n👉 https://t.me/sktech_000\n\n👉 https://t.me/instamaxpro",
             "update": "🔔 New APK Update Available: {app_name}\n📥 Download: {apk_link}"
         }
 
